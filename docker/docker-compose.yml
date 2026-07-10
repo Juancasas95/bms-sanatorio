@@ -1,0 +1,28 @@
+services:
+
+  nodered:
+
+    image: nodered/node-red:latest
+
+    container_name: bms-nodered
+
+    restart: unless-stopped
+
+    ports:
+
+      - "1880:1880"
+
+    volumes:
+
+      - ../nodered:/data
+
+      - ../config:/config:ro
+
+      - ../drivers:/drivers:ro
+
+      - ../logs:/logs
+
+      - ../backups:/backups
+
+    environment:
+      - TZ=America/Montevideo #configura la zona horaria

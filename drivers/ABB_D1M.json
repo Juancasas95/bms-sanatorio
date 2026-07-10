@@ -1,0 +1,97 @@
+{
+  "manufacturer": "ABB",
+  "model": "D1M",
+
+  "variables": {
+
+    "VoltageL1": {
+      "name": "Tensión L1",
+      "fc": 3,
+      "address": 23298,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 0.1,
+      "swap": true,
+      "unit": "V",
+      "decimals": 1
+    },
+
+    "VoltageL2": {
+      "name": "Tensión L2",
+      "fc": 3,
+      "address": 23300,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 0.1,
+      "unit": "V",
+      "decimals": 1
+    },
+
+    "VoltageL3": {
+      "name": "Tensión L3",
+      "fc": 3,
+      "address": 23302,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 0.1,
+      "unit": "V",
+      "decimals": 1
+    },
+
+    "CurrentL1": {
+      "name": "Corriente L1",
+      "fc": 3,
+      "address": 23312,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier":0.01,
+      "unit": "A",
+      "decimals": 1
+    },
+
+    "CurrentL2": {
+      "name": "Corriente L2",
+      "fc": 3,
+      "address": 23314,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 0.01,
+      "unit": "A",
+      "decimals": 1
+    },
+
+    "CurrentL3": {
+      "name": "Corriente L3",
+      "fc": 3,
+      "address": 23316,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 0.01,
+      "unit": "A",
+      "decimals": 1
+    },
+
+    "ActivePower": {
+      "name": "Potencia Activa total",
+      "fc": 3,
+      "address": 20488,
+      "quantity": 1,
+      "type": "int16",
+      "multiplier": 0.01,
+      "unit": "W",
+      "decimals": 1
+    },
+
+    "ImportEnergy": {
+      "name": "Energía Importada",
+      "fc": 3,
+      "address": 20480,
+      "quantity": 4,
+      "type": "uint32",
+      "multiplier": 0.01,
+      "unit": "kW",
+      "decimals": 1
+    }
+
+  }
+}

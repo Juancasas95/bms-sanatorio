@@ -1,0 +1,87 @@
+{
+   "BC1": {
+    "name": "Bomba de calor 1",
+    "driver": "ABB_D1M",
+    "gateway": "SCU200",
+    "slave": 35,
+
+    "points": [
+      "VoltageL1",
+      "VoltageL2",
+      "VoltageL3",
+      "CurrentL1",
+      "CurrentL2",
+      "CurrentL3",
+      "ActivePower",
+      "ImportEnergy"
+    ]
+  },
+
+  "BC2": {
+    "name": "Bomba de calor 2",
+    "driver": "ABB_D1M",
+    "gateway": "SCU200",
+    "slave": 36,
+    "points": [
+      "VoltageL1",
+      "VoltageL2",
+      "VoltageL3",
+      "CurrentL1",
+      "CurrentL2",
+      "CurrentL3",
+      "ActivePower",
+      "ImportEnergy"
+     ]
+  },
+
+  "AUT1": {
+    "name": "Autoclave 1",
+    "driver": "ABB_D1M",
+    "gateway": "SCU200",
+    "slave": 40,
+    "points": [
+      "VoltageL1",
+      "VoltageL2",
+      "VoltageL3",
+      "CurrentL1",
+      "CurrentL2",
+      "CurrentL3",
+      "ActivePower",
+      "ImportEnergy"
+     ]
+  },
+
+  "RX": {
+    "name": "Equipo de Rayos X",
+    "driver": "ABB_M4M",
+    "gateway": "SCU200",
+    "slave": 39,
+    "points": [
+      "VoltageL1",
+      "VoltageL2",
+      "VoltageL3",
+      "CurrentL1",
+      "CurrentL2",
+      "CurrentL3",
+      "ActivePower",
+      "ImportEnergy"
+     ]
+  },
+
+  "AUT2": {
+    "name": "Autoclave 2",
+    "driver": "ABB_D1M",
+    "gateway": "SCU200",
+    "slave": 38,
+    "points": [
+      "VoltageL1",
+      "VoltageL2",
+      "VoltageL3",
+      "CurrentL1",
+      "CurrentL2",
+      "CurrentL3",
+      "ActivePower",
+      "ImportEnergy"
+     ]
+  }
+}

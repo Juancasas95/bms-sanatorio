@@ -1,0 +1,964 @@
+[
+    {
+        "id": "d5c85a53b1e9adae",
+        "type": "tab",
+        "label": "00 - Configuracion",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "548bfb93b2adf834",
+        "type": "tab",
+        "label": "00 - Startup",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "091af37d2933f7aa",
+        "type": "tab",
+        "label": "10 - Scheduler",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "ff59ca75e9791696",
+        "type": "tab",
+        "label": "20 - Device manager",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "291f91c97ecd24c1",
+        "type": "tab",
+        "label": "30 - Adquisition Engine",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "f65d29de0116f69b",
+        "type": "tab",
+        "label": "40 - Alarmas",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "4ffdac17e98d3ae7",
+        "type": "tab",
+        "label": "90 - Pruebas",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "6c26a882f341bc4c",
+        "type": "tab",
+        "label": "99 - Laboratorio",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "126e4fa809698f73",
+        "type": "modbus-client",
+        "name": "SCU 200",
+        "clienttype": "tcp",
+        "bufferCommands": true,
+        "stateLogEnabled": false,
+        "queueLogEnabled": false,
+        "failureLogEnabled": true,
+        "tcpHost": "172.16.252.244",
+        "tcpPort": 502,
+        "tcpType": "DEFAULT",
+        "serialPort": "/dev/ttyUSB",
+        "serialType": "RTU-BUFFERD",
+        "serialBaudrate": 9600,
+        "serialDatabits": 8,
+        "serialStopbits": 1,
+        "serialParity": "none",
+        "serialConnectionDelay": 100,
+        "serialAsciiResponseStartDelimiter": "0x3A",
+        "unit_id": 1,
+        "commandDelay": 1,
+        "clientTimeout": 1000,
+        "reconnectOnTimeout": true,
+        "reconnectTimeout": 2000,
+        "parallelUnitIdsAllowed": true,
+        "showErrors": false,
+        "showWarnings": true,
+        "showLogs": true
+    },
+    {
+        "id": "9b9982ad2806f380",
+        "type": "file in",
+        "z": "548bfb93b2adf834",
+        "name": "",
+        "filename": "/config/gateways.json",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 440,
+        "y": 220,
+        "wires": [
+            [
+                "96e574ff7fe5cb22"
+            ]
+        ]
+    },
+    {
+        "id": "96e574ff7fe5cb22",
+        "type": "function",
+        "z": "548bfb93b2adf834",
+        "name": "Store gateway",
+        "func": "const gateways = JSON.parse(msg.payload);\n\nglobal.set(\"gateways\", gateways);\n\nnode.status({\n    fill: \"green\",\n    shape: \"dot\",\n    text: Object.keys(gateways).length + \" gateways\"\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 660,
+        "y": 220,
+        "wires": [
+            [
+                "f82a41e075ee70b1"
+            ]
+        ]
+    },
+    {
+        "id": "919a7d4bc66c44a3",
+        "type": "file in",
+        "z": "548bfb93b2adf834",
+        "name": "",
+        "filename": "/config/devices.json",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 430,
+        "y": 320,
+        "wires": [
+            [
+                "ff758161dc2b7b51"
+            ]
+        ]
+    },
+    {
+        "id": "ff758161dc2b7b51",
+        "type": "function",
+        "z": "548bfb93b2adf834",
+        "name": "Store devices",
+        "func": "const devices = JSON.parse(msg.payload);\n\nglobal.set(\"devices\", devices);\n\nnode.status({\n    fill:\"green\",\n    shape:\"dot\",\n    text:Object.keys(devices).length+\" devices\"\n});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 660,
+        "y": 320,
+        "wires": [
+            [
+                "f82a41e075ee70b1"
+            ]
+        ]
+    },
+    {
+        "id": "a38f4c9cd0c26bf0",
+        "type": "function",
+        "z": "548bfb93b2adf834",
+        "name": "Store drivers",
+        "func": "const fs = global.get(\"fs\");\nconst path = global.get(\"path\");\n\nif (!fs || !path) {\n    node.error(\"fs o path no están cargados.\");\n    return null;\n}\n\nconst drivers = {};\n\ntry {\n\n    // Leer todos los archivos de la carpeta\n    const files = fs.readdirSync(\"/drivers\");\n\n    for (const file of files) {\n\n        // Ignorar todo lo que no sea JSON\n        if (!file.endsWith(\".json\")) {\n            continue;\n        }\n\n        // Ruta completa\n        const fullPath = path.join(\"/drivers\", file);\n\n        // Leer archivo\n        const json = fs.readFileSync(fullPath, \"utf8\");\n\n        // Convertir texto a objeto\n        const driver = JSON.parse(json);\n\n        // Nombre del driver = nombre del archivo\n        const driverId = path.basename(file, \".json\");\n\n        drivers[driverId] = driver;\n    }\n\n    global.set(\"drivers\", drivers);\n\n    node.status({\n        fill: \"green\",\n        shape: \"dot\",\n        text: Object.keys(drivers).length + \" drivers\"\n    });\n\n    msg.payload = drivers;\n\n    return msg;\n\n} catch(err) {\n\n    node.status({\n        fill: \"red\",\n        shape: \"ring\",\n        text: err.message\n    });\n\n    node.error(err);\n\n    return null;\n\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 490,
+        "y": 420,
+        "wires": [
+            [
+                "3dabc913f1520aa6"
+            ]
+        ]
+    },
+    {
+        "id": "f94f8bdbdb83f18d",
+        "type": "function",
+        "z": "548bfb93b2adf834",
+        "name": "Decode Value",
+        "func": "function registersToFloat(registers) {\n\n    const buffer = Buffer.alloc(4);\n\n    buffer.writeUInt16BE(registers[0], 0);\n    buffer.writeUInt16BE(registers[1], 2);\n\n    return buffer.readFloatBE(0);\n\n}\n\nlet value;\n\nswitch (msg.variable.type) {\n\n    case \"float\":\n\n        value = registersToFloat(msg.payload);\n\n        break;\n\n    default:\n\n        node.error(\"Tipo de dato no soportado: \" + msg.variable.type);\n        return null;\n}\n\nmsg.payload = {\n\n    point: msg.point,\n\n    value: Number(value.toFixed(msg.variable.decimals))\n\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 820,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "7b4d6d0a93884e43",
+        "type": "function",
+        "z": "548bfb93b2adf834",
+        "name": "Buid Measurement",
+        "func": "msg.payload = {\n\n    deviceId: msg.device.id,\n\n    timestamp: new Date().toISOString(),\n\n    measurements: msg.payload\n\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 730,
+        "y": 840,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0959a2bb5efba4ce",
+        "type": "inject",
+        "z": "548bfb93b2adf834",
+        "name": "Startup",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "1",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 200,
+        "y": 340,
+        "wires": [
+            [
+                "9b9982ad2806f380",
+                "919a7d4bc66c44a3",
+                "a38f4c9cd0c26bf0"
+            ]
+        ]
+    },
+    {
+        "id": "f82a41e075ee70b1",
+        "type": "function",
+        "z": "548bfb93b2adf834",
+        "name": "System Ready ",
+        "func": "global.set(\"systemReady\", true);\n\nnode.status({\n    fill:\"green\",\n    shape:\"dot\",\n    text:\"READY\"\n});\n\nnode.warn(\"========== BMS READY ==========\");\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 880,
+        "y": 320,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "63a617654c59c8d0",
+        "type": "inject",
+        "z": "548bfb93b2adf834",
+        "name": "Reload config",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 210,
+        "y": 400,
+        "wires": [
+            [
+                "919a7d4bc66c44a3"
+            ]
+        ]
+    },
+    {
+        "id": "3dabc913f1520aa6",
+        "type": "debug",
+        "z": "548bfb93b2adf834",
+        "name": "debug 2",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 720,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "5a26767a715637a7",
+        "type": "function",
+        "z": "548bfb93b2adf834",
+        "name": "function 3",
+        "func": "msg.payload = global.get(\"drivers\");\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 460,
+        "y": 80,
+        "wires": [
+            [
+                "74b1b1adca47b806"
+            ]
+        ]
+    },
+    {
+        "id": "4b1b4e1274be3494",
+        "type": "inject",
+        "z": "548bfb93b2adf834",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 260,
+        "y": 80,
+        "wires": [
+            [
+                "5a26767a715637a7"
+            ]
+        ]
+    },
+    {
+        "id": "74b1b1adca47b806",
+        "type": "debug",
+        "z": "548bfb93b2adf834",
+        "name": "debug 3",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 640,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "15a9190a85940c22",
+        "type": "function",
+        "z": "091af37d2933f7aa",
+        "name": "Queue",
+        "func": "const devices = global.get(\"devices\");\n\nif (!devices) {\n    node.error(\"No hay dispositivos cargados\");\n    return null;\n}\n\nlet messages = [];\n\nfor (const deviceId in devices) {\n\n    messages.push({\n        payload: deviceId\n    });\n\n}\n\nreturn [messages];",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 220,
+        "wires": [
+            [
+                "d546883d0ced02f0"
+            ]
+        ]
+    },
+    {
+        "id": "adba722abf56182a",
+        "type": "debug",
+        "z": "091af37d2933f7aa",
+        "name": "debug 6",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 760,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "d546883d0ced02f0",
+        "type": "delay",
+        "z": "091af37d2933f7aa",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "1",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 580,
+        "y": 220,
+        "wires": [
+            [
+                "adba722abf56182a"
+            ]
+        ]
+    },
+    {
+        "id": "44adc9f39d9c1b7d",
+        "type": "inject",
+        "z": "ff59ca75e9791696",
+        "name": "Buscar BC2",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "BC2",
+        "payloadType": "str",
+        "x": 110,
+        "y": 120,
+        "wires": [
+            [
+                "ae86e0fde51d877a"
+            ]
+        ]
+    },
+    {
+        "id": "ae86e0fde51d877a",
+        "type": "function",
+        "z": "ff59ca75e9791696",
+        "name": "Resolve Device",
+        "func": "const deviceId = msg.payload;\n\nconst devices = global.get(\"devices\");\n\nif (!devices) {\n    node.error(\"La configuración de dispositivos no está cargada.\");\n    return null;\n}\n\nconst device = devices[deviceId];\n\nif (!device) {\n    node.error(`No existe el dispositivo ${deviceId}`);\n    return null;\n}\n\n// Creamos una copia para no modificar la configuración original\nmsg.device = JSON.parse(JSON.stringify(device));\n\nmsg.device.id = deviceId;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 120,
+        "wires": [
+            [
+                "06c6015263848b97"
+            ]
+        ]
+    },
+    {
+        "id": "06c6015263848b97",
+        "type": "function",
+        "z": "ff59ca75e9791696",
+        "name": "Resolve Gateway",
+        "func": "const gateways = global.get(\"gateways\");\n\nif (!gateways) {\n    node.error(\"No existe gateways en memoria\");\n    return null;\n}\n\nconst gatewayName = msg.device.gateway;\n\nconst gateway = gateways[gatewayName];\n\nif (!gateway) {\n    node.error(`Gateway ${gatewayName} inexistente`);\n    return null;\n}\n\nmsg.device.gateway = JSON.parse(JSON.stringify(gateway));\n\nmsg.device.gateway.id = gatewayName;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 530,
+        "y": 120,
+        "wires": [
+            [
+                "8bfc9931c8adc0ca"
+            ]
+        ]
+    },
+    {
+        "id": "8bfc9931c8adc0ca",
+        "type": "function",
+        "z": "ff59ca75e9791696",
+        "name": "Resolve Driver",
+        "func": "const drivers = global.get(\"drivers\");\n\nif (!drivers) {\n    node.error(\"No existen drivers cargados\");\n    return null;\n}\n\nconst driverName = msg.device.driver;\n\nconst driver = drivers[driverName];\n\nif (!driver) {\n    node.error(`Driver ${driverName} inexistente`);\n    return null;\n}\n\nmsg.device.driver = JSON.parse(JSON.stringify(driver));\n\nmsg.device.driver.id = driverName;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 120,
+        "wires": [
+            [
+                "d8daabcc525b4539"
+            ]
+        ]
+    },
+    {
+        "id": "d8daabcc525b4539",
+        "type": "link out",
+        "z": "ff59ca75e9791696",
+        "name": "link out 1",
+        "mode": "link",
+        "links": [
+            "b2dabe46cccd620c"
+        ],
+        "x": 895,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "556b1e97ecc705a4",
+        "type": "split",
+        "z": "291f91c97ecd24c1",
+        "name": "",
+        "splt": "\\n",
+        "spltType": "str",
+        "arraySplt": 1,
+        "arraySpltType": "len",
+        "stream": false,
+        "addname": "",
+        "property": "payload",
+        "x": 390,
+        "y": 160,
+        "wires": [
+            [
+                "62ca3c494ff63696"
+            ]
+        ]
+    },
+    {
+        "id": "62ca3c494ff63696",
+        "type": "function",
+        "z": "291f91c97ecd24c1",
+        "name": "Prepare Modbus Request nuevo",
+        "func": "const job = msg.payload;\n\n// Conservamos toda la información para los siguientes nodos\nmsg.device = job.device;\nmsg.point = job.point;\nmsg.variable = job.variable;\n\n// Petición exactamente igual a la prueba que funciona\nmsg.payload = {\n\n    fc: job.request.fc,\n\n    unitid: job.request.unitid,\n\n    address: job.request.address,\n\n    quantity: job.request.quantity\n\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 690,
+        "y": 160,
+        "wires": [
+            [
+                "d66fbbe5bb491bb4"
+            ]
+        ]
+    },
+    {
+        "id": "d66fbbe5bb491bb4",
+        "type": "modbus-flex-getter",
+        "z": "291f91c97ecd24c1",
+        "name": "Scu200",
+        "showStatusActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "logIOActivities": false,
+        "server": "126e4fa809698f73",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": true,
+        "delayOnStart": false,
+        "enableDeformedMessages": false,
+        "startDelayTime": "",
+        "x": 180,
+        "y": 240,
+        "wires": [
+            [
+                "d04af16379baaa94"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "d04af16379baaa94",
+        "type": "function",
+        "z": "291f91c97ecd24c1",
+        "name": "Decode Value",
+        "func": "const regs = msg.payload;\n\nif (!Array.isArray(regs)) {\n    return null;\n}\n\nconst variable = msg.variable;\n\nlet value = null;\n\n//==================================================\n// UINT16\n//==================================================\nif (variable.type === \"uint16\") {\n\n    value = regs[0];\n\n}\n\n//==================================================\n// INT16\n//==================================================\nelse if (variable.type === \"int16\") {\n\n    const buffer = Buffer.alloc(2);\n    buffer.writeUInt16BE(regs[0],0);\n    value = buffer.readInt16BE(0);\n\n}\n\n//==================================================\n// UINT32\n//==================================================\nelse if (variable.type === \"uint32\") {\n\n    // Si llegaron 4 registros, usamos solamente los dos primeros.\n    // Esto ocurre en algunos equipos (como el SCU200) que reservan\n    // espacio para una futura expansión a 64 bits.\n\n    const r0 = regs[0];\n    const r1 = regs[1];\n\n    if (variable.swap === true) {\n\n        value = ((r0 << 16) >>> 0) + r1;\n\n    } else {\n\n        value = ((r1 << 16) >>> 0) + r0;\n\n    }\n\n}\n\n//==================================================\n// INT32\n//==================================================\nelse if (variable.type === \"int32\") {\n\n    const buffer = Buffer.alloc(4);\n\n    if (variable.swap === true) {\n\n        buffer.writeUInt16BE(regs[1],0);\n        buffer.writeUInt16BE(regs[0],2);\n\n    } else {\n\n        buffer.writeUInt16BE(regs[0],0);\n        buffer.writeUInt16BE(regs[1],2);\n\n    }\n\n    value = buffer.readInt32BE(0);\n\n}\n\n//==================================================\n// FLOAT\n//==================================================\nelse if (variable.type === \"float\") {\n\n    const buffer = Buffer.alloc(4);\n\n    if (variable.swap === true) {\n\n        buffer.writeUInt16BE(regs[1],0);\n        buffer.writeUInt16BE(regs[0],2);\n\n    } else {\n\n        buffer.writeUInt16BE(regs[0],0);\n        buffer.writeUInt16BE(regs[1],2);\n\n    }\n\n    value = buffer.readFloatBE(0);\n\n}\n\n//==================================================\n\nelse {\n\n    node.error(\"Tipo desconocido: \" + variable.type);\n    return null;\n\n}\n\n// Aplicar multiplicador\n\nif (variable.multiplier !== undefined) {\n\n    value *= variable.multiplier;\n\n}\n\n// Redondeo\n\nif (variable.decimals !== undefined) {\n\n    value = Number(value.toFixed(variable.decimals));\n\n}\n\nmsg.payload = {\n    value: value\n};\n\nreturn msg;\n\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 240,
+        "wires": [
+            [
+                "23d8ed7fe8b8e56c"
+            ]
+        ]
+    },
+    {
+        "id": "23d8ed7fe8b8e56c",
+        "type": "function",
+        "z": "291f91c97ecd24c1",
+        "name": "Buid Measurement",
+        "func": "const deviceId = msg.device.id;\n\nif (!deviceId) {\n    node.error(\"No existe device.id\");\n    return null;\n}\n\nlet cache = flow.get(\"measurements\") || {};\n\nif (!cache[deviceId]) {\n    cache[deviceId] = {};\n}\n\ncache[deviceId][msg.point] = msg.payload.value;\n\nflow.set(\"measurements\", cache);\n\n// Cantidad de variables esperadas\nconst expected = msg.device.points.length;\n\nif (Object.keys(cache[deviceId]).length < expected) {\n    return null;\n}\n\n// Ya llegaron todas\n\nmsg.payload = {\n    device: deviceId,\n    timestamp: new Date().toISOString(),\n    measurements: cache[deviceId]\n};\n\n// Limpiamos para el próximo ciclo\ndelete cache[deviceId];\nflow.set(\"measurements\", cache);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 650,
+        "y": 240,
+        "wires": [
+            [
+                "8830f91afa297945"
+            ]
+        ]
+    },
+    {
+        "id": "b2dabe46cccd620c",
+        "type": "link in",
+        "z": "291f91c97ecd24c1",
+        "name": "link in 1",
+        "links": [
+            "d8daabcc525b4539"
+        ],
+        "x": 105,
+        "y": 160,
+        "wires": [
+            [
+                "6dc13f2912f881d0"
+            ]
+        ]
+    },
+    {
+        "id": "6dc13f2912f881d0",
+        "type": "function",
+        "z": "291f91c97ecd24c1",
+        "name": "Buid Job",
+        "func": "const device = msg.device;\n\nif (!device) {\n    node.error(\"No llegó ningún dispositivo.\");\n    return null;\n}\n\nif (!device.driver) {\n    node.error(\"El dispositivo no tiene driver.\");\n    return null;\n}\n\nif (!Array.isArray(device.points)) {\n    node.error(\"El dispositivo no tiene lista de puntos.\");\n    return null;\n}\n\nconst jobs = [];\n\nfor (const pointName of device.points) {\n\n    const variable = device.driver.variables[pointName];\n\n    if (!variable) {\n\n        node.warn(`La variable ${pointName} no existe en el driver ${device.driver.id}`);\n\n        continue;\n    }\n\n    jobs.push({\n\n        device: device,\n\n        point: pointName,\n\n        variable: variable,\n\n        request: {\n\n            unitid: device.slave,\n\n            fc: variable.fc,\n\n            address: variable.address,\n\n            quantity: variable.quantity\n\n        }\n\n    });\n\n}\n\nmsg.payload = jobs;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 220,
+        "y": 160,
+        "wires": [
+            [
+                "556b1e97ecc705a4"
+            ]
+        ]
+    },
+    {
+        "id": "343b9e44f506bd6c",
+        "type": "split",
+        "z": "291f91c97ecd24c1",
+        "name": "",
+        "splt": "\\n",
+        "spltType": "str",
+        "arraySplt": 1,
+        "arraySpltType": "len",
+        "stream": false,
+        "addname": "",
+        "property": "payload",
+        "x": 390,
+        "y": 400,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "312cd84f60fb8b95",
+        "type": "function",
+        "z": "291f91c97ecd24c1",
+        "name": "Prepare Modbus Request",
+        "func": "const job = msg.payload;\n\nmsg.device = job.device;\nmsg.point = job.point;\nmsg.variable = job.variable;\n\nmsg.payload = {\n\n    fc: job.variable.fc,\n\n    unitid: job.device.slave,\n\n    address: job.variable.address,\n\n    quantity: job.variable.quantity\n\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 580,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3b2c84354bb1f283",
+        "type": "modbus-flex-getter",
+        "z": "291f91c97ecd24c1",
+        "name": "Scu200",
+        "showStatusActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "logIOActivities": false,
+        "server": "126e4fa809698f73",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": true,
+        "delayOnStart": false,
+        "enableDeformedMessages": false,
+        "startDelayTime": "",
+        "x": 180,
+        "y": 480,
+        "wires": [
+            [
+                "8c08c15483a18f25"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "8c08c15483a18f25",
+        "type": "function",
+        "z": "291f91c97ecd24c1",
+        "name": "Decode Value",
+        "func": "const regs = msg.payload;\n\nif (!Array.isArray(regs)) {\n    return null;\n}\n\nconst variable = msg.variable;\n\nconst buffer = Buffer.alloc(regs.length * 2);\n\n// Copiamos los registros respetando el orden indicado por el driver\nif (variable.swap === true && regs.length === 2) {\n\n    buffer.writeUInt16BE(regs[1], 0);\n    buffer.writeUInt16BE(regs[0], 2);\n\n} else {\n\n    for (let i = 0; i < regs.length; i++) {\n        buffer.writeUInt16BE(regs[i], i * 2);\n    }\n\n}\n\nlet value;\n\nswitch (variable.type) {\n\n    case \"uint16\":\n        value = buffer.readUInt16BE(0);\n        break;\n\n    case \"int16\":\n        value = buffer.readInt16BE(0);\n        break;\n\n    case \"uint32\":\n        value = buffer.readUInt32BE(0);\n        break;\n\n    case \"int32\":\n        value = buffer.readInt32BE(0);\n        break;\n\n    case \"float\":\n        value = buffer.readFloatBE(0);\n        break;\n\n    default:\n        node.error(\"Tipo desconocido: \" + variable.type);\n        return null;\n}\n\nif (variable.multiplier !== undefined) {\n    value *= variable.multiplier;\n}\n\nif (variable.decimals !== undefined) {\n    value = Number(value.toFixed(variable.decimals));\n}\n\nmsg.payload = {\n    point: msg.point,\n    value: value\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 480,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "09890fc78ab2dc27",
+        "type": "function",
+        "z": "291f91c97ecd24c1",
+        "name": "Buid Measurement",
+        "func": "const deviceId = msg.device.id;\n\nlet cache = flow.get(\"measurements\") || {};\n\nif(!cache[deviceId]){\n\n    cache[deviceId]={};\n\n}\n\ncache[deviceId][msg.payload.point]=msg.payload.value;\n\nflow.set(\"measurements\",cache);\n\nconst total = msg.device.points.length;\n\nif(Object.keys(cache[deviceId]).length < total){\n\n    return null;\n\n}\n\nmsg.payload={\n\n    device:deviceId,\n\n    timestamp:new Date().toISOString(),\n\n    measurements:cache[deviceId]\n\n};\n\ndelete cache[deviceId];\n\nflow.set(\"measurements\",cache);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 610,
+        "y": 480,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "1bf8b8bfd51249ba",
+        "type": "function",
+        "z": "291f91c97ecd24c1",
+        "name": "Buid request",
+        "func": "const device = msg.device;\n\nconst jobs = [];\n\nfor (const pointName of device.points) {\n\n    const variable = device.driver.variables[pointName];\n\n    if (!variable) {\n        node.warn(`No existe la variable ${pointName}`);\n        continue;\n    }\n\n    jobs.push({\n\n        device: device,\n\n        point: pointName,\n\n        variable: variable\n\n    });\n\n}\n\nmsg.payload = jobs;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 230,
+        "y": 400,
+        "wires": [
+            [
+                "343b9e44f506bd6c"
+            ]
+        ]
+    },
+    {
+        "id": "8830f91afa297945",
+        "type": "debug",
+        "z": "291f91c97ecd24c1",
+        "name": "debug 4",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 640,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "90d28853a25fb38c",
+        "type": "debug",
+        "z": "4ffdac17e98d3ae7",
+        "name": "debug 1",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 840,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "77697bcdc5477d95",
+        "type": "modbus-flex-getter",
+        "z": "4ffdac17e98d3ae7",
+        "name": "SCU 200",
+        "showStatusActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "logIOActivities": false,
+        "server": "126e4fa809698f73",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": false,
+        "delayOnStart": false,
+        "enableDeformedMessages": false,
+        "startDelayTime": "",
+        "x": 520,
+        "y": 200,
+        "wires": [
+            [
+                "90d28853a25fb38c"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "0b28ca6866b39306",
+        "type": "function",
+        "z": "4ffdac17e98d3ae7",
+        "name": "function 1",
+        "func": "msg.payload = {\n    fc: 3,\n    unitid: 36,\n    address: 20480,\n    quantity: 4\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 200,
+        "wires": [
+            [
+                "77697bcdc5477d95"
+            ]
+        ]
+    },
+    {
+        "id": "1db199b4afbaed43",
+        "type": "inject",
+        "z": "4ffdac17e98d3ae7",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 200,
+        "y": 200,
+        "wires": [
+            [
+                "0b28ca6866b39306"
+            ]
+        ]
+    },
+    {
+        "id": "61d32fba33ee7de8",
+        "type": "debug",
+        "z": "6c26a882f341bc4c",
+        "name": "debug 5",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 680,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "1e9d24fb8a43617a",
+        "type": "function",
+        "z": "6c26a882f341bc4c",
+        "name": "function 6",
+        "func": "msg.payload = {\n    gateways: global.get(\"gateways\"),\n    devices: global.get(\"devices\"),\n    drivers: global.get(\"drivers\")\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 240,
+        "wires": [
+            [
+                "61d32fba33ee7de8"
+            ]
+        ]
+    }
+]

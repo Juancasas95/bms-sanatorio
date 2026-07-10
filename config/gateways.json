@@ -1,0 +1,8 @@
+{
+  "SCU200": {
+    "protocol": "modbus-tcp",
+    "ip": "172.16.252.244",
+    "port": 502,
+    "timeout": 2000
+  }
+}
