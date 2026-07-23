@@ -3,85 +3,34 @@
     "name": "Bomba de calor 1",
     "driver": "ABB_D1M",
     "gateway": "SCU200",
-    "slave": 35,
-
-    "points": [
-      "VoltageL1",
-      "VoltageL2",
-      "VoltageL3",
-      "CurrentL1",
-      "CurrentL2",
-      "CurrentL3",
-      "ActivePower",
-      "ImportEnergy"
-    ]
+    "slave": 35
   },
 
   "BC2": {
     "name": "Bomba de calor 2",
     "driver": "ABB_D1M",
     "gateway": "SCU200",
-    "slave": 36,
-    "points": [
-      "VoltageL1",
-      "VoltageL2",
-      "VoltageL3",
-      "CurrentL1",
-      "CurrentL2",
-      "CurrentL3",
-      "ActivePower",
-      "ImportEnergy"
-     ]
-  },
+    "slave": 36
+ },
 
   "AUT1": {
     "name": "Autoclave 1",
     "driver": "ABB_D1M",
     "gateway": "SCU200",
-    "slave": 40,
-    "points": [
-      "VoltageL1",
-      "VoltageL2",
-      "VoltageL3",
-      "CurrentL1",
-      "CurrentL2",
-      "CurrentL3",
-      "ActivePower",
-      "ImportEnergy"
-     ]
+    "slave": 40
   },
 
-  "RX": {
-    "name": "Equipo de Rayos X",
-    "driver": "ABB_M4M",
+  "RES": {
+    "name": "Resistencias",
+    "driver": "ABB_D1M",
     "gateway": "SCU200",
-    "slave": 39,
-    "points": [
-      "VoltageL1",
-      "VoltageL2",
-      "VoltageL3",
-      "CurrentL1",
-      "CurrentL2",
-      "CurrentL3",
-      "ActivePower",
-      "ImportEnergy"
-     ]
+    "slave": 37
   },
 
   "AUT2": {
     "name": "Autoclave 2",
     "driver": "ABB_D1M",
     "gateway": "SCU200",
-    "slave": 38,
-    "points": [
-      "VoltageL1",
-      "VoltageL2",
-      "VoltageL3",
-      "CurrentL1",
-      "CurrentL2",
-      "CurrentL3",
-      "ActivePower",
-      "ImportEnergy"
-     ]
+    "slave": 38
   }
 }

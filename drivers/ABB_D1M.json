@@ -13,7 +13,8 @@
       "multiplier": 0.1,
       "swap": true,
       "unit": "V",
-      "decimals": 1
+      "decimals": 1,
+      "scan": 2000
     },
 
     "VoltageL2": {
@@ -24,7 +25,8 @@
       "type": "uint16",
       "multiplier": 0.1,
       "unit": "V",
-      "decimals": 1
+      "decimals": 1,
+      "scan": 2000
     },
 
     "VoltageL3": {
@@ -35,7 +37,8 @@
       "type": "uint16",
       "multiplier": 0.1,
       "unit": "V",
-      "decimals": 1
+      "decimals": 1,
+      "scan": 2000
     },
 
     "CurrentL1": {
@@ -46,7 +49,8 @@
       "type": "uint16",
       "multiplier":0.01,
       "unit": "A",
-      "decimals": 1
+      "decimals": 1,
+      "scan": 2000
     },
 
     "CurrentL2": {
@@ -57,7 +61,8 @@
       "type": "uint16",
       "multiplier": 0.01,
       "unit": "A",
-      "decimals": 1
+      "decimals": 1,
+      "scan": 2000
     },
 
     "CurrentL3": {
@@ -68,29 +73,56 @@
       "type": "uint16",
       "multiplier": 0.01,
       "unit": "A",
-      "decimals": 1
+      "decimals": 1,
+      "scan": 2000
     },
 
-    "ActivePower": {
-      "name": "Potencia Activa total",
+    "ActivePowerL1": {
+      "name": "Potencia Activa L1",
       "fc": 3,
-      "address": 20488,
-      "quantity": 1,
-      "type": "int16",
+      "address": 23324,
+      "quantity": 2,
+      "type": "uint32",
       "multiplier": 0.01,
       "unit": "W",
-      "decimals": 1
+      "decimals": 1,
+      "scan": 2000
     },
 
-    "ImportEnergy": {
+    "ActivePowerL2": {
+      "name": "Potencia Activa L2",
+      "fc": 3,
+      "address": 23326,
+      "quantity": 2,
+      "type": "uint32",
+      "multiplier": 0.01,
+      "unit": "W",
+      "decimals": 1,
+      "scan": 2000
+    },
+
+    "ActivePowerL3": {
+      "name": "Potencia Activa L3",
+      "fc": 3,
+      "address": 23328,
+      "quantity": 2,
+      "type": "uint32",
+      "multiplier": 0.01,
+      "unit": "W",
+      "decimals": 1,
+      "scan": 2000
+    },
+
+   "ImportEnergy": {
       "name": "Energía Importada",
       "fc": 3,
       "address": 20480,
       "quantity": 4,
       "type": "uint32",
       "multiplier": 0.01,
-      "unit": "kW",
-      "decimals": 1
+      "unit": "kWh",
+      "decimals": 1,
+      "scan": 300000
     }
 
   }
