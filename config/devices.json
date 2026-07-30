@@ -32,5 +32,14 @@
     "driver": "ABB_D1M",
     "gateway": "SCU200",
     "slave": 38
-  }
+  },
+
+
+
+    "AIRMED": {
+        "name": "Central Gases Médicinales",
+        "gateway": "HAIWELL",
+        "driver": "HAIWELL_H32S0R",
+        "slave": 1
+    }
 }

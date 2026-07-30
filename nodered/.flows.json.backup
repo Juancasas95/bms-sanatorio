@@ -50,7 +50,7 @@
     {
         "id": "f65d29de0116f69b",
         "type": "tab",
-        "label": "40 - Alarmas",
+        "label": "50 - MQTT Explorer",
         "disabled": false,
         "info": "",
         "env": []
@@ -133,6 +133,36 @@
         "sessionExpiry": ""
     },
     {
+        "id": "9d8cbf53c2eb4650",
+        "type": "modbus-client",
+        "name": "Haiwell",
+        "clienttype": "tcp",
+        "bufferCommands": true,
+        "stateLogEnabled": false,
+        "queueLogEnabled": false,
+        "failureLogEnabled": true,
+        "tcpHost": "10.3.5.107",
+        "tcpPort": "502",
+        "tcpType": "DEFAULT",
+        "serialPort": "/dev/ttyUSB",
+        "serialType": "RTU-BUFFERD",
+        "serialBaudrate": 9600,
+        "serialDatabits": 8,
+        "serialStopbits": 1,
+        "serialParity": "none",
+        "serialConnectionDelay": 100,
+        "serialAsciiResponseStartDelimiter": "0x3A",
+        "unit_id": 1,
+        "commandDelay": 1,
+        "clientTimeout": 1000,
+        "reconnectOnTimeout": true,
+        "reconnectTimeout": 2000,
+        "parallelUnitIdsAllowed": true,
+        "showErrors": false,
+        "showWarnings": true,
+        "showLogs": true
+    },
+    {
         "id": "9b9982ad2806f380",
         "type": "file in",
         "z": "548bfb93b2adf834",
@@ -168,7 +198,8 @@
         "y": 220,
         "wires": [
             [
-                "f82a41e075ee70b1"
+                "f82a41e075ee70b1",
+                "3dabc913f1520aa6"
             ]
         ]
     },
@@ -227,9 +258,7 @@
         "x": 490,
         "y": 420,
         "wires": [
-            [
-                "3dabc913f1520aa6"
-            ]
+            []
         ]
     },
     {
@@ -312,7 +341,7 @@
         "finalize": "",
         "libs": [],
         "x": 880,
-        "y": 300,
+        "y": 280,
         "wires": [
             []
         ]
@@ -355,11 +384,11 @@
         "tosidebar": true,
         "console": false,
         "tostatus": false,
-        "complete": "payload",
-        "targetType": "msg",
+        "complete": "true",
+        "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 720,
+        "x": 880,
         "y": 420,
         "wires": []
     },
@@ -639,8 +668,8 @@
         "tosidebar": true,
         "console": false,
         "tostatus": false,
-        "complete": "payload.deviceId",
-        "targetType": "msg",
+        "complete": "true",
+        "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
         "x": 420,
@@ -677,7 +706,7 @@
         "addname": "",
         "property": "payload",
         "x": 390,
-        "y": 160,
+        "y": 100,
         "wires": [
             [
                 "62ca3c494ff63696"
@@ -696,12 +725,12 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 610,
-        "y": 160,
+        "x": 690,
+        "y": 100,
         "wires": [
             [
-                "d66fbbe5bb491bb4",
-                "fc1dc95282c028d0"
+                "fc1dc95282c028d0",
+                "127aac3d865e01d7"
             ]
         ]
     },
@@ -723,12 +752,12 @@
         "delayOnStart": false,
         "enableDeformedMessages": false,
         "startDelayTime": "",
-        "x": 180,
-        "y": 240,
+        "x": 340,
+        "y": 280,
         "wires": [
             [
-                "d04af16379baaa94",
-                "15574647789b274f"
+                "15574647789b274f",
+                "a722ed695c931af6"
             ],
             []
         ]
@@ -738,20 +767,17 @@
         "type": "function",
         "z": "291f91c97ecd24c1",
         "name": "Decode Value",
-        "func": "const regs = msg.payload;\n\nif (!Array.isArray(regs)) {\n    return null;\n}\n\nconst variable = msg.variable;\n\nlet value = null;\n\n//==================================================\n// UINT16\n//==================================================\nif (variable.type === \"uint16\") {\n\n    value = regs[0];\n\n}\n\n//==================================================\n// INT16\n//==================================================\nelse if (variable.type === \"int16\") {\n\n    const buffer = Buffer.alloc(2);\n    buffer.writeUInt16BE(regs[0],0);\n    value = buffer.readInt16BE(0);\n\n}\n\n//==================================================\n// UINT32\n//==================================================\nelse if (variable.type === \"uint32\") {\n\n    // Si llegaron 4 registros, usamos solamente los dos primeros.\n    // Esto ocurre en algunos equipos (como el SCU200) que reservan\n    // espacio para una futura expansión a 64 bits.\n\n    const r0 = regs[0];\n    const r1 = regs[1];\n\n    if (variable.swap === true) {\n\n        value = ((r0 << 16) >>> 0) + r1;\n\n    } else {\n\n        value = ((r1 << 16) >>> 0) + r0;\n\n    }\n\n}\n\n//==================================================\n// INT32\n//==================================================\nelse if (variable.type === \"int32\") {\n\n    const buffer = Buffer.alloc(4);\n\n    if (variable.swap === true) {\n\n        buffer.writeUInt16BE(regs[1],0);\n        buffer.writeUInt16BE(regs[0],2);\n\n    } else {\n\n        buffer.writeUInt16BE(regs[0],0);\n        buffer.writeUInt16BE(regs[1],2);\n\n    }\n\n    value = buffer.readInt32BE(0);\n\n}\n\n//==================================================\n// FLOAT\n//==================================================\nelse if (variable.type === \"float\") {\n\n    const buffer = Buffer.alloc(4);\n\n    if (variable.swap === true) {\n\n        buffer.writeUInt16BE(regs[1],0);\n        buffer.writeUInt16BE(regs[0],2);\n\n    } else {\n\n        buffer.writeUInt16BE(regs[0],0);\n        buffer.writeUInt16BE(regs[1],2);\n\n    }\n\n    value = buffer.readFloatBE(0);\n\n}\n\n//==================================================\n\nelse {\n\n    node.error(\"Tipo desconocido: \" + variable.type);\n    return null;\n\n}\n\n// Aplicar multiplicador (viejo)\n\n//if (variable.multiplier !== undefined) {\n//\n//    value *= variable.multiplier;\n//\n//}\n// ... [Deja todo tu código anterior de decodificación de tipos igual] ...\n\n// APLICAR MULTIPLICADOR INTELIGENTE (Corregido para Potencia Activa dinámica)\nif (variable.multiplier !== undefined) {\n    \n    // Si es la variable de potencia activa y el valor bruto es mayor a 10000, \n    // significa que el medidor está enviando centiwatts (baja carga).\n    if (msg.point && msg.point.includes(\"ActivePower\") && value < 10000) {\n        // Alta carga (>1000W): El medidor ya envía Watts directos. \n        // Forzamos el multiplicador a 1 para no dividir el valor real.\n        value *= 1; \n    } else {\n        // Comportamiento normal para el resto de variables o baja carga (<1000W)\n        value *= variable.multiplier;\n    }\n}\n\n// Redondeo\nif (variable.decimals !== undefined) {\n    value = Number(value.toFixed(variable.decimals));\n}\n\nmsg.payload = {\n    value: value\n};\n\nreturn msg;\n\n// Redondeo\n\nif (variable.decimals !== undefined) {\n\n    value = Number(value.toFixed(variable.decimals));\n\n}\n\nmsg.payload = {\n    value: value\n};\n\nreturn msg;\n\n",
+        "func": "const regs = msg.payload;\n\nif (!Array.isArray(regs)) {\n    return null;\n}\n\nconst variable = msg.variable;\n\nlet value = null;\n\n//==================================================\n// UINT16\n//==================================================\nif (variable.type === \"uint16\") {\n\n    value = regs[0];\n\n}\n\n//==================================================\n// INT16\n//==================================================\nelse if (variable.type === \"int16\") {\n\n    const buffer = Buffer.alloc(2);\n    buffer.writeUInt16BE(regs[0],0);\n    value = buffer.readInt16BE(0);\n\n}\n\n//==================================================\n// UINT32\n//==================================================\nelse if (variable.type === \"uint32\") {\n\n    // Si llegaron 4 registros, usamos solamente los dos primeros.\n    // Esto ocurre en algunos equipos (como el SCU200) que reservan\n    // espacio para una futura expansión a 64 bits.\n\n    const r0 = regs[0];\n    const r1 = regs[1];\n\n    if (variable.swap === true) {\n\n        value = ((r0 << 16) >>> 0) + r1;\n\n    } else {\n\n        value = ((r1 << 16) >>> 0) + r0;\n\n    }\n\n}\n\n//==================================================\n// INT32\n//==================================================\nelse if (variable.type === \"int32\") {\n\n    const buffer = Buffer.alloc(4);\n\n    if (variable.swap === true) {\n\n        buffer.writeUInt16BE(regs[1],0);\n        buffer.writeUInt16BE(regs[0],2);\n\n    } else {\n\n        buffer.writeUInt16BE(regs[0],0);\n        buffer.writeUInt16BE(regs[1],2);\n\n    }\n\n    value = buffer.readInt32BE(0);\n\n}\n\n//==================================================\n// FLOAT\n//==================================================\nelse if (variable.type === \"float\") {\n\n    const buffer = Buffer.alloc(4);\n\n    if (variable.swap === true) {\n\n        buffer.writeUInt16BE(regs[1],0);\n        buffer.writeUInt16BE(regs[0],2);\n\n    } else {\n\n        buffer.writeUInt16BE(regs[0],0);\n        buffer.writeUInt16BE(regs[1],2);\n\n    }\n\n    value = buffer.readFloatBE(0);\n\n}\n\n//==================================================\n\nelse {\n\n    node.error(\"Tipo desconocido: \" + variable.type);\n    return null;\n\n}\n\n// Aplicar multiplicador (viejo)\n\nif (variable.multiplier !== undefined) {\n\n    value *= variable.multiplier;\n\n}\n\n// Redondeo\n\nif (variable.decimals !== undefined) {\n\n    value = Number(value.toFixed(variable.decimals));\n\n}\n\nmsg.payload = {\n    value: value\n};\n\nreturn msg;\n\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 380,
-        "y": 240,
+        "x": 500,
+        "y": 580,
         "wires": [
-            [
-                "23d8ed7fe8b8e56c",
-                "76bdad645dc61b4a"
-            ]
+            []
         ]
     },
     {
@@ -766,8 +792,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 630,
-        "y": 240,
+        "x": 750,
+        "y": 340,
         "wires": [
             [
                 "bd6bbb12a2d744f8"
@@ -783,7 +809,7 @@
             "d8daabcc525b4539"
         ],
         "x": 105,
-        "y": 160,
+        "y": 100,
         "wires": [
             [
                 "6dc13f2912f881d0"
@@ -803,10 +829,11 @@
         "finalize": "",
         "libs": [],
         "x": 240,
-        "y": 160,
+        "y": 100,
         "wires": [
             [
-                "556b1e97ecc705a4"
+                "556b1e97ecc705a4",
+                "6d25218f209cdd9b"
             ]
         ]
     },
@@ -819,8 +846,8 @@
         "links": [
             "173c9315cf6a3d0e"
         ],
-        "x": 765,
-        "y": 240,
+        "x": 905,
+        "y": 340,
         "wires": []
     },
     {
@@ -835,8 +862,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 80,
-        "y": 460,
+        "x": 320,
+        "y": 500,
         "wires": [
             []
         ]
@@ -854,8 +881,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 660,
-        "y": 380,
+        "x": 760,
+        "y": 440,
         "wires": []
     },
     {
@@ -871,8 +898,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 360,
-        "y": 320,
+        "x": 520,
+        "y": 260,
         "wires": []
     },
     {
@@ -888,8 +915,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 840,
-        "y": 440,
+        "x": 900,
+        "y": 40,
         "wires": []
     },
     {
@@ -909,6 +936,140 @@
         "wires": [
             []
         ]
+    },
+    {
+        "id": "6d25218f209cdd9b",
+        "type": "debug",
+        "z": "291f91c97ecd24c1",
+        "name": "debug 14",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 480,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "127aac3d865e01d7",
+        "type": "switch",
+        "z": "291f91c97ecd24c1",
+        "name": "Gateway Router",
+        "property": "device.gateway.id",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "SCU200",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "HAIWELL",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 160,
+        "y": 340,
+        "wires": [
+            [
+                "d66fbbe5bb491bb4",
+                "d04da31fb4baaf39"
+            ],
+            [
+                "dfc2c0e49acf72a0"
+            ]
+        ]
+    },
+    {
+        "id": "dfc2c0e49acf72a0",
+        "type": "modbus-flex-getter",
+        "z": "291f91c97ecd24c1",
+        "name": "Haiwell",
+        "showStatusActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "logIOActivities": false,
+        "server": "9d8cbf53c2eb4650",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": true,
+        "delayOnStart": false,
+        "enableDeformedMessages": false,
+        "startDelayTime": "",
+        "x": 340,
+        "y": 400,
+        "wires": [
+            [
+                "a722ed695c931af6",
+                "76bdad645dc61b4a"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "a722ed695c931af6",
+        "type": "function",
+        "z": "291f91c97ecd24c1",
+        "name": "Decode Value (new switch)",
+        "func": "const regs = msg.payload;\n\nif (!Array.isArray(regs)) {\n    return null;\n}\n\nconst variable = msg.variable;\n\nlet value;\n\n//==================================================\n// Decodificación según tipo\n//==================================================\n\nswitch (variable.type) {\n\n    //--------------------------------------------------\n    // BOOL\n    //--------------------------------------------------\n    case \"bool\":\n        value = !!regs[0];\n        break;\n\n    //--------------------------------------------------\n    // UINT16\n    //--------------------------------------------------\n    case \"uint16\":\n        value = regs[0];\n        break;\n\n    //--------------------------------------------------\n    // INT16\n    //--------------------------------------------------\n    case \"int16\": {\n\n        const buffer = Buffer.alloc(2);\n        buffer.writeUInt16BE(regs[0], 0);\n        value = buffer.readInt16BE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // UINT32\n    //--------------------------------------------------\n    case \"uint32\": {\n\n        const r0 = regs[0];\n        const r1 = regs[1];\n\n        if (variable.swap) {\n            value = ((r0 << 16) >>> 0) + r1;\n        } else {\n            value = ((r1 << 16) >>> 0) + r0;\n        }\n\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // INT32\n    //--------------------------------------------------\n    case \"int32\": {\n\n        const buffer = Buffer.alloc(4);\n\n        if (variable.swap) {\n            buffer.writeUInt16BE(regs[1], 0);\n            buffer.writeUInt16BE(regs[0], 2);\n        } else {\n            buffer.writeUInt16BE(regs[0], 0);\n            buffer.writeUInt16BE(regs[1], 2);\n        }\n\n        value = buffer.readInt32BE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // FLOAT\n    //--------------------------------------------------\n    case \"float\": {\n\n        const buffer = Buffer.alloc(4);\n\n        if (variable.swap) {\n            buffer.writeUInt16BE(regs[1], 0);\n            buffer.writeUInt16BE(regs[0], 2);\n        } else {\n            buffer.writeUInt16BE(regs[0], 0);\n            buffer.writeUInt16BE(regs[1], 2);\n        }\n\n        value = buffer.readFloatBE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // DOUBLE (reservado)\n    //--------------------------------------------------\n    case \"double\":\n        node.error(\"Tipo DOUBLE aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // UINT64 (reservado)\n    //--------------------------------------------------\n    case \"uint64\":\n        node.error(\"Tipo UINT64 aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // INT64 (reservado)\n    //--------------------------------------------------\n    case \"int64\":\n        node.error(\"Tipo INT64 aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // STRING (reservado)\n    //--------------------------------------------------\n    case \"string\":\n        node.error(\"Tipo STRING aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // Desconocido\n    //--------------------------------------------------\n    default:\n        node.error(`Tipo desconocido: ${variable.type}`);\n        return null;\n}\n\n//==================================================\n// Post-procesado (solo números)\n//==================================================\n\nif (typeof value === \"number\") {\n\n    if (variable.multiplier !== undefined) {\n        value *= variable.multiplier;\n    }\n\n    if (variable.decimals !== undefined) {\n        value = Number(value.toFixed(variable.decimals));\n    }\n\n}\n\n//==================================================\n\nmsg.payload = {\n    value: value\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 520,
+        "y": 340,
+        "wires": [
+            [
+                "23d8ed7fe8b8e56c",
+                "f5aad37c0bb57b88"
+            ]
+        ]
+    },
+    {
+        "id": "d04da31fb4baaf39",
+        "type": "debug",
+        "z": "291f91c97ecd24c1",
+        "name": "debug 15",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 160,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "f5aad37c0bb57b88",
+        "type": "debug",
+        "z": "291f91c97ecd24c1",
+        "name": "debug 16",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 780,
+        "y": 260,
+        "wires": []
     },
     {
         "id": "173c9315cf6a3d0e",
@@ -1018,6 +1179,296 @@
         ]
     },
     {
+        "id": "da6bd6ab39cd0f06",
+        "type": "mqtt out",
+        "z": "f65d29de0116f69b",
+        "name": "",
+        "topic": "",
+        "qos": "",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "3bb6fb820dd3038d",
+        "x": 870,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "391c1e7d11659d9d",
+        "type": "modbus-flex-getter",
+        "z": "f65d29de0116f69b",
+        "name": "Modbus",
+        "showStatusActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "logIOActivities": false,
+        "server": "9d8cbf53c2eb4650",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": true,
+        "delayOnStart": false,
+        "enableDeformedMessages": false,
+        "startDelayTime": "",
+        "x": 320,
+        "y": 260,
+        "wires": [
+            [
+                "aefcd7a703c2ba1d",
+                "6952b526feded966"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "aefcd7a703c2ba1d",
+        "type": "function",
+        "z": "f65d29de0116f69b",
+        "name": "Decoder",
+        "func": "const regs = msg.payload;\nif (!Array.isArray(regs) || regs.length === 0) {\n    return null;\n}\n\nconst result = {};\n\n// 16 Bits (1 Registro)\nresult.bool = !!regs[0];\nresult.uint16 = regs[0];\nconst b2 = Buffer.alloc(2);\nb2.writeUInt16BE(regs[0], 0);\nresult.int16 = b2.readInt16BE(0);\n\n// 32 Bits (Requiere mínimo 2 registros)\nif (regs.length >= 2) {\n    const b4 = Buffer.alloc(4);\n    \n    // ABCD\n    b4.writeUInt16BE(regs[0], 0);\n    b4.writeUInt16BE(regs[1], 2);\n    result.float_abcd = b4.readFloatBE(0);\n    result.uint32_abcd = b4.readUInt32BE(0);\n    result.int32_abcd = b4.readInt32BE(0);\n\n    // CDAB\n    b4.writeUInt16BE(regs[1], 0);\n    b4.writeUInt16BE(regs[0], 2);\n    result.float_cdab = b4.readFloatBE(0);\n    result.uint32_cdab = b4.readUInt32BE(0);\n    result.int32_cdab = b4.readInt32BE(0);\n\n    // BCAD\n    const b_bcad = Buffer.alloc(4);\n    b_bcad[0] = (regs[0] >> 8) & 0xFF;\n    b_bcad[1] = regs[0] & 0xFF;\n    b_bcad[2] = (regs[1] >> 8) & 0xFF;\n    b_bcad[3] = regs[1] & 0xFF;\n    result.uint32_bcad = b_bcad.readUInt32BE(0);\n    result.int32_bcad = b_bcad.readInt32BE(0);\n}\n\n// 64 Bits (Requiere mínimo 4 registros)\nif (regs.length >= 4) {\n    const b8 = Buffer.alloc(8);\n    b8.writeUInt16BE(regs[0], 0);\n    b8.writeUInt16BE(regs[1], 2);\n    b8.writeUInt16BE(regs[2], 4);\n    b8.writeUInt16BE(regs[3], 6);\n    result.int64 = b8.readBigInt64BE(0).toString();\n    result.uint64 = b8.readBigUInt64BE(0).toString();\n}\n\n// Generar salidas individuales para MQTT\n//const mensajes = [];\n//for (const tipo in result) {\n//    mensajes.push({\n//        topic: \"bms/diagnostico/resultado/\" + tipo,\n//        payload: result[tipo]\n//    });\n//}\n//return [mensajes];\nmsg.result = result;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 520,
+        "y": 260,
+        "wires": [
+            [
+                "47c25b9b352dc98f",
+                "85a4662a82a5b899"
+            ]
+        ]
+    },
+    {
+        "id": "2ad27bcdfd0fc174",
+        "type": "debug",
+        "z": "f65d29de0116f69b",
+        "name": "debug 17",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 540,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "6952b526feded966",
+        "type": "debug",
+        "z": "f65d29de0116f69b",
+        "name": "debug 18",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 440,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "edb9f55b2e5f62bf",
+        "type": "debug",
+        "z": "f65d29de0116f69b",
+        "name": "debug 19",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 840,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "42268f97d226449f",
+        "type": "inject",
+        "z": "f65d29de0116f69b",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{     \"fc\":4,     \"address\":5,     \"quantity\":2,     \"unitid\":1 }",
+        "payloadType": "json",
+        "x": 130,
+        "y": 160,
+        "wires": [
+            [
+                "391c1e7d11659d9d"
+            ]
+        ]
+    },
+    {
+        "id": "151f971f3e7cee49",
+        "type": "http in",
+        "z": "f65d29de0116f69b",
+        "name": "",
+        "url": "/modbus/read",
+        "method": "post",
+        "upload": false,
+        "skipBodyParsing": false,
+        "swaggerDoc": "",
+        "x": 350,
+        "y": 180,
+        "wires": [
+            [
+                "077a059379384d67",
+                "2ad27bcdfd0fc174"
+            ]
+        ]
+    },
+    {
+        "id": "077a059379384d67",
+        "type": "json",
+        "z": "f65d29de0116f69b",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 530,
+        "y": 180,
+        "wires": [
+            [
+                "b3d4e52bb6a381df"
+            ]
+        ]
+    },
+    {
+        "id": "b3d4e52bb6a381df",
+        "type": "function",
+        "z": "f65d29de0116f69b",
+        "name": "function 1",
+        "func": "msg.payload = {\n\n    fc: Number(msg.payload.fc),\n\n    address: Number(msg.payload.address),\n\n    quantity: Number(msg.payload.quantity),\n\n    unitid: Number(msg.payload.unitid)\n\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 660,
+        "y": 180,
+        "wires": [
+            [
+                "391c1e7d11659d9d",
+                "edb9f55b2e5f62bf"
+            ]
+        ]
+    },
+    {
+        "id": "f1a21c646db9a107",
+        "type": "http response",
+        "z": "f65d29de0116f69b",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 830,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "47c25b9b352dc98f",
+        "type": "function",
+        "z": "f65d29de0116f69b",
+        "name": "function 2",
+        "func": "msg.payload = {\n\n    status: \"ok\",\n\n    registers: msg.payload,\n\n    decoded: msg.result\n\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 660,
+        "y": 380,
+        "wires": [
+            [
+                "f1a21c646db9a107",
+                "346773ff2fa47f10"
+            ]
+        ]
+    },
+    {
+        "id": "85a4662a82a5b899",
+        "type": "function",
+        "z": "f65d29de0116f69b",
+        "name": "function 3",
+        "func": "const mensajes = [];\n\nfor (const tipo in msg.result){\n\n    mensajes.push({\n\n        topic:\"bms/diagnostico/resultado/\"+tipo,\n\n        payload:msg.result[tipo]\n\n    });\n\n}\n\nreturn [mensajes];",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 700,
+        "y": 260,
+        "wires": [
+            [
+                "da6bd6ab39cd0f06",
+                "32ab171cad5875a9"
+            ]
+        ]
+    },
+    {
+        "id": "32ab171cad5875a9",
+        "type": "debug",
+        "z": "f65d29de0116f69b",
+        "name": "debug 20",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 900,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "346773ff2fa47f10",
+        "type": "debug",
+        "z": "f65d29de0116f69b",
+        "name": "debug 21",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 740,
+        "y": 480,
+        "wires": []
+    },
+    {
         "id": "b73e7591b261dcad",
         "type": "inject",
         "z": "4ffdac17e98d3ae7",
@@ -1036,7 +1487,7 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "",
-        "payload": "{     \"fc\": 3,     \"unitid\": 35,     \"address\": 23324,     \"quantity\": 1,     \"point\": \"ActivePowerL1\",     \"variable\": {         \"name\": \"Potencia Activa L1\",         \"fc\": 3,         \"address\": 23324,         \"quantity\": 1,         \"type\": \"int16\",         \"multiplier\": 0.01,         \"unit\": \"W\",         \"decimals\": 1     },     \"device\": {         \"id\": \"BC1\",         \"name\": \"Bomba de calor 1\",         \"gateway\": {             \"id\": \"SCU200\"         }     } }",
+        "payload": "{     \"fc\":1,     \"address\":1540,     \"quantity\":8,     \"unitid\":1 }",
         "payloadType": "json",
         "x": 150,
         "y": 200,
@@ -1123,7 +1574,7 @@
         "showErrors": false,
         "showWarnings": true,
         "logIOActivities": false,
-        "server": "126e4fa809698f73",
+        "server": "9d8cbf53c2eb4650",
         "useIOFile": false,
         "ioFile": "",
         "useIOForPayload": false,
@@ -1136,7 +1587,8 @@
         "y": 200,
         "wires": [
             [
-                "1afae2ceb51a05bf"
+                "f7298e8410cb5aa2",
+                "1a91bdf63a4d3a0a"
             ],
             []
         ]
@@ -1150,12 +1602,49 @@
         "tosidebar": true,
         "console": false,
         "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 760,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "f7298e8410cb5aa2",
+        "type": "function",
+        "z": "4ffdac17e98d3ae7",
+        "name": "decode",
+        "func": "const regs = msg.payload;\n\nif (!Array.isArray(regs)) {\n    node.error(\"No llegaron registros\");\n    return null;\n}\n\nnode.warn(\"Registros recibidos: \" + JSON.stringify(regs));\n\nconst result = {};\n\ntry {\n\n    // Bool\n    result.bool = !!regs[0];\n\n    // UInt16\n    result.uint16 = regs[0];\n\n    // Int16\n    {\n        const b = Buffer.alloc(2);\n        b.writeUInt16BE(regs[0],0);\n        result.int16 = b.readInt16BE(0);\n    }\n\n    if (regs.length >= 2){\n\n        // Float ABCD\n        {\n            const b = Buffer.alloc(4);\n            b.writeUInt16BE(regs[0],0);\n            b.writeUInt16BE(regs[1],2);\n            result.float_ABCD = b.readFloatBE(0);\n        }\n\n        // Float CDAB\n        {\n            const b = Buffer.alloc(4);\n            b.writeUInt16BE(regs[1],0);\n            b.writeUInt16BE(regs[0],2);\n            result.float_CDAB = b.readFloatBE(0);\n        }\n\n        // UInt32 ABCD\n        result.uint32_ABCD =\n            ((regs[0] << 16) >>>0) + regs[1];\n\n        // UInt32 CDAB\n        result.uint32_CDAB =\n            ((regs[1] << 16) >>>0) + regs[0];\n\n        // Int32 ABCD\n        {\n            const b = Buffer.alloc(4);\n            b.writeUInt16BE(regs[0],0);\n            b.writeUInt16BE(regs[1],2);\n            result.int32_ABCD = b.readInt32BE(0);\n        }\n\n        // Int32 CDAB\n        {\n            const b = Buffer.alloc(4);\n            b.writeUInt16BE(regs[1],0);\n            b.writeUInt16BE(regs[0],2);\n            result.int32_CDAB = b.readInt32BE(0);\n        }\n\n    }\n\n}\ncatch(err){\n    node.error(err.message);\n}\n\nmsg.payload = result;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 200,
+        "wires": [
+            [
+                "1afae2ceb51a05bf"
+            ]
+        ]
+    },
+    {
+        "id": "1a91bdf63a4d3a0a",
+        "type": "debug",
+        "z": "4ffdac17e98d3ae7",
+        "name": "debug 22",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
         "complete": "true",
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 560,
-        "y": 200,
+        "x": 580,
+        "y": 120,
         "wires": []
     },
     {

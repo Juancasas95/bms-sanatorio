@@ -1,0 +1,209 @@
+{
+  "manufacturer": "Haiwell",
+  "model": "H32S0R",
+
+  "variables": {
+
+    "MedicalAirTankPressure": {
+      "name": "Tanque aire médico",
+      "fc": 4,
+      "address": 0,
+      "quantity": 1,
+      "type": "int16",
+      "multiplier": 0.1,
+      "swap": false,
+      "unit": "Bar",
+      "decimals": 2,
+      "scan": 2000
+    },
+
+    "ColectorAirPressure": {
+      "name": "Colector aire médico",
+      "fc": 4,
+      "address": 2,
+      "quantity":2,
+      "type": "int16",
+      "multiplier": 0.1,
+      "swap": false,
+      "unit": "Bar",
+      "decimals": 2,
+      "scan": 2000
+    },
+
+    "VaccumTanqPressure": {
+      "name": "Tanques de vacio",
+      "fc": 4,
+      "address": 5,
+      "quantity": 1,
+      "type": "int16",
+      "multiplier": 0.01,
+      "swap": false,
+      "unit": "Bar",
+      "decimals": 2,
+      "scan": 2000
+    },
+
+    "MedicalAirRampPressure": {
+      "name": "Rampa aire médico",
+      "fc": 4,
+      "address": 3,
+      "quantity": 1,
+      "type": "int16",
+      "multiplier": 0.1,
+      "swap": false,
+      "unit": "Bar",
+      "decimals": 2,
+      "scan": 2000
+    },
+
+    "Compressor1Operative": {
+      "name": "Compresor 1 Operativo",
+      "fc": 1,
+      "address": 1540,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "Compressor1Running": {
+      "name": "Compresor 1 ON",
+      "fc": 1,
+      "address": 1536,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "Compressor2Operative": {
+      "name": "Compresor 2 OK",
+      "fc": 1,
+      "address": 1541,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "Compressor2Running": {
+      "name": "Compresor 2 ON",
+      "fc": 1,
+      "address": 1537,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "VacuumPump1Operative": {
+      "name": "Bomba Vacío 1 OK",
+      "fc": 1,
+      "address": 1542,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "VacuumPump1Running": {
+      "name": "Bomba Vacío 1 ON",
+      "fc": 1,
+      "address": 1538,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "VacuumPump2Operative": {
+      "name": "Bomba Vacío 2 OK",
+      "fc": 1,
+      "address": 1543,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "VacuumPump2Running": {
+      "name": "Bomba Vacío 2 ON",
+      "fc": 1,
+      "address": 1539,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "Compressor1RunTime": {
+      "name": "Tiempo uso Compresor 1",
+      "fc": 3,
+      "address": 100,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 1,
+      "swap": false,
+      "unit": "min",
+      "decimals": 0,
+      "scan": 1000
+    },
+
+    "Compressor1RestTime": {
+      "name": "Tiempo descanso Compresor 1",
+      "fc": 3,
+      "address": 110,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 1,
+      "swap": false,
+      "unit": "min",
+      "decimals": 0,
+      "scan": 1000
+    },
+
+    "Compressor1Starts": {
+      "name": "Cantidad encendidos Compresor 1",
+      "fc": 3,
+      "address": 10,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 1,
+      "swap": false,
+      "unit": "",
+      "decimals": 0,
+      "scan": 5000
+    },
+
+    "Compressor2RunTime": {
+      "name": "Tiempo uso Compresor 2",
+      "fc": 3,
+      "address": 130,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 1,
+      "swap": false,
+      "unit": "min",
+      "decimals": 0,
+      "scan": 1000
+    },
+
+    "Compressor2RestTime": {
+      "name": "Tiempo descanso Compresor 2",
+      "fc": 3,
+      "address": 140,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 1,
+      "swap": false,
+      "unit": "min",
+      "decimals": 0,
+      "scan": 1000
+    },
+
+    "Compressor2Starts": {
+      "name": "Cantidad encendidos Compresor 2",
+      "fc": 3,
+      "address": 11,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 1,
+      "swap": false,
+      "unit": "",
+      "decimals": 0,
+      "scan": 5000
+    }
+  }
+}
