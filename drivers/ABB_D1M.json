@@ -14,7 +14,7 @@
       "swap": true,
       "unit": "V",
       "decimals": 1,
-      "scan": 2000
+      "scan": 1000
     },
 
     "VoltageL2": {
@@ -26,7 +26,7 @@
       "multiplier": 0.1,
       "unit": "V",
       "decimals": 1,
-      "scan": 2000
+      "scan": 1000
     },
 
     "VoltageL3": {
@@ -38,7 +38,7 @@
       "multiplier": 0.1,
       "unit": "V",
       "decimals": 1,
-      "scan": 2000
+      "scan": 1000
     },
 
     "CurrentL1": {
@@ -50,7 +50,7 @@
       "multiplier":0.01,
       "unit": "A",
       "decimals": 1,
-      "scan": 2000
+      "scan": 1000
     },
 
     "CurrentL2": {
@@ -62,7 +62,7 @@
       "multiplier": 0.01,
       "unit": "A",
       "decimals": 1,
-      "scan": 2000
+      "scan": 1000
     },
 
     "CurrentL3": {
@@ -74,7 +74,7 @@
       "multiplier": 0.01,
       "unit": "A",
       "decimals": 1,
-      "scan": 2000
+      "scan": 1000
     },
 
     "ActivePowerL1": {
@@ -86,7 +86,7 @@
       "multiplier": 0.01,
       "unit": "W",
       "decimals": 1,
-      "scan": 2000
+      "scan": 1000
     },
 
     "ActivePowerL2": {
@@ -98,7 +98,7 @@
       "multiplier": 0.01,
       "unit": "W",
       "decimals": 1,
-      "scan": 2000
+      "scan": 1000
     },
 
     "ActivePowerL3": {
@@ -110,7 +110,7 @@
       "multiplier": 0.01,
       "unit": "W",
       "decimals": 1,
-      "scan": 2000
+      "scan": 1000
     },
 
    "ImportEnergy": {

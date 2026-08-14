@@ -1021,7 +1021,7 @@
         "type": "function",
         "z": "291f91c97ecd24c1",
         "name": "Decode Value (new switch)",
-        "func": "const regs = msg.payload;\n\nif (!Array.isArray(regs)) {\n    return null;\n}\n\nconst variable = msg.variable;\n\nlet value;\n\n//==================================================\n// Decodificación según tipo\n//==================================================\n\nswitch (variable.type) {\n\n    //--------------------------------------------------\n    // BOOL\n    //--------------------------------------------------\n    case \"bool\":\n        value = !!regs[0];\n        break;\n\n    //--------------------------------------------------\n    // UINT16\n    //--------------------------------------------------\n    case \"uint16\":\n        value = regs[0];\n        break;\n\n    //--------------------------------------------------\n    // INT16\n    //--------------------------------------------------\n    case \"int16\": {\n\n        const buffer = Buffer.alloc(2);\n        buffer.writeUInt16BE(regs[0], 0);\n        value = buffer.readInt16BE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // UINT32\n    //--------------------------------------------------\n    case \"uint32\": {\n\n        const r0 = regs[0];\n        const r1 = regs[1];\n\n        if (variable.swap) {\n            value = ((r0 << 16) >>> 0) + r1;\n        } else {\n            value = ((r1 << 16) >>> 0) + r0;\n        }\n\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // INT32\n    //--------------------------------------------------\n    case \"int32\": {\n\n        const buffer = Buffer.alloc(4);\n\n        if (variable.swap) {\n            buffer.writeUInt16BE(regs[1], 0);\n            buffer.writeUInt16BE(regs[0], 2);\n        } else {\n            buffer.writeUInt16BE(regs[0], 0);\n            buffer.writeUInt16BE(regs[1], 2);\n        }\n\n        value = buffer.readInt32BE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // FLOAT\n    //--------------------------------------------------\n    case \"float\": {\n\n        const buffer = Buffer.alloc(4);\n\n        if (variable.swap) {\n            buffer.writeUInt16BE(regs[1], 0);\n            buffer.writeUInt16BE(regs[0], 2);\n        } else {\n            buffer.writeUInt16BE(regs[0], 0);\n            buffer.writeUInt16BE(regs[1], 2);\n        }\n\n        value = buffer.readFloatBE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // DOUBLE (reservado)\n    //--------------------------------------------------\n    case \"double\":\n        node.error(\"Tipo DOUBLE aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // UINT64 (reservado)\n    //--------------------------------------------------\n    case \"uint64\":\n        node.error(\"Tipo UINT64 aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // INT64 (reservado)\n    //--------------------------------------------------\n    case \"int64\":\n        node.error(\"Tipo INT64 aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // STRING (reservado)\n    //--------------------------------------------------\n    case \"string\":\n        node.error(\"Tipo STRING aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // Desconocido\n    //--------------------------------------------------\n    default:\n        node.error(`Tipo desconocido: ${variable.type}`);\n        return null;\n}\n\n//==================================================\n// Post-procesado (solo números)\n//==================================================\n\nif (typeof value === \"number\") {\n\n    if (variable.multiplier !== undefined) {\n        value *= variable.multiplier;\n    }\n\n    if (variable.decimals !== undefined) {\n        value = Number(value.toFixed(variable.decimals));\n    }\n\n}\n\n//==================================================\n\nmsg.payload = {\n    value: value\n};\n\nreturn msg;",
+        "func": "const regs = msg.payload;\n\nif (!Array.isArray(regs)) {\n    return null;\n}\n\nconst variable = msg.variable;\n\nlet value;\n\n//==================================================\n// Decodificación según tipo\n//==================================================\n\nswitch (variable.type) {\n\n    //--------------------------------------------------\n    // BOOL\n    //--------------------------------------------------\n    case \"bool\":\n        //value = !!regs[0];\n        value = regs[0] ? 1 : 0;//acondicionamos el dato a realbool\n        break;\n\n    //--------------------------------------------------\n    // UINT16\n    //--------------------------------------------------\n    case \"uint16\":\n        value = regs[0];\n        break;\n\n    //--------------------------------------------------\n    // INT16\n    //--------------------------------------------------\n    case \"int16\": {\n\n        const buffer = Buffer.alloc(2);\n        buffer.writeUInt16BE(regs[0], 0);\n        value = buffer.readInt16BE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // UINT32\n    //--------------------------------------------------\n    case \"uint32\": {\n\n        const r0 = regs[0];\n        const r1 = regs[1];\n\n        if (variable.swap) {\n            value = ((r0 << 16) >>> 0) + r1;\n        } else {\n            value = ((r1 << 16) >>> 0) + r0;\n        }\n\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // INT32\n    //--------------------------------------------------\n    case \"int32\": {\n\n        const buffer = Buffer.alloc(4);\n\n        if (variable.swap) {\n            buffer.writeUInt16BE(regs[1], 0);\n            buffer.writeUInt16BE(regs[0], 2);\n        } else {\n            buffer.writeUInt16BE(regs[0], 0);\n            buffer.writeUInt16BE(regs[1], 2);\n        }\n\n        value = buffer.readInt32BE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // FLOAT\n    //--------------------------------------------------\n    case \"float\": {\n\n        const buffer = Buffer.alloc(4);\n\n        if (variable.swap) {\n            buffer.writeUInt16BE(regs[1], 0);\n            buffer.writeUInt16BE(regs[0], 2);\n        } else {\n            buffer.writeUInt16BE(regs[0], 0);\n            buffer.writeUInt16BE(regs[1], 2);\n        }\n\n        value = buffer.readFloatBE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // DOUBLE (reservado)\n    //--------------------------------------------------\n    case \"double\":\n        node.error(\"Tipo DOUBLE aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // UINT64 (reservado)\n    //--------------------------------------------------\n    case \"uint64\":\n        node.error(\"Tipo UINT64 aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // INT64 (reservado)\n    //--------------------------------------------------\n    case \"int64\":\n        node.error(\"Tipo INT64 aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // STRING (reservado)\n    //--------------------------------------------------\n    case \"string\":\n        node.error(\"Tipo STRING aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // Desconocido\n    //--------------------------------------------------\n    default:\n        node.error(`Tipo desconocido: ${variable.type}`);\n        return null;\n}\n\n//==================================================\n// Post-procesado (solo números)\n//==================================================\n\nif (typeof value === \"number\") {\n\n    if (variable.multiplier !== undefined) {\n        value *= variable.multiplier;\n    }\n\n    if (variable.decimals !== undefined) {\n        value = Number(value.toFixed(variable.decimals));\n    }\n\n}\n\n//==================================================\n\nmsg.payload = {\n    value: value\n};\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -1192,8 +1192,8 @@
         "correl": "",
         "expiry": "",
         "broker": "3bb6fb820dd3038d",
-        "x": 870,
-        "y": 240,
+        "x": 930,
+        "y": 260,
         "wires": []
     },
     {
@@ -1229,7 +1229,7 @@
         "type": "function",
         "z": "f65d29de0116f69b",
         "name": "Decoder",
-        "func": "const regs = msg.payload;\nif (!Array.isArray(regs) || regs.length === 0) {\n    return null;\n}\n\nconst result = {};\n\n// 16 Bits (1 Registro)\nresult.bool = !!regs[0];\nresult.uint16 = regs[0];\nconst b2 = Buffer.alloc(2);\nb2.writeUInt16BE(regs[0], 0);\nresult.int16 = b2.readInt16BE(0);\n\n// 32 Bits (Requiere mínimo 2 registros)\nif (regs.length >= 2) {\n    const b4 = Buffer.alloc(4);\n    \n    // ABCD\n    b4.writeUInt16BE(regs[0], 0);\n    b4.writeUInt16BE(regs[1], 2);\n    result.float_abcd = b4.readFloatBE(0);\n    result.uint32_abcd = b4.readUInt32BE(0);\n    result.int32_abcd = b4.readInt32BE(0);\n\n    // CDAB\n    b4.writeUInt16BE(regs[1], 0);\n    b4.writeUInt16BE(regs[0], 2);\n    result.float_cdab = b4.readFloatBE(0);\n    result.uint32_cdab = b4.readUInt32BE(0);\n    result.int32_cdab = b4.readInt32BE(0);\n\n    // BCAD\n    const b_bcad = Buffer.alloc(4);\n    b_bcad[0] = (regs[0] >> 8) & 0xFF;\n    b_bcad[1] = regs[0] & 0xFF;\n    b_bcad[2] = (regs[1] >> 8) & 0xFF;\n    b_bcad[3] = regs[1] & 0xFF;\n    result.uint32_bcad = b_bcad.readUInt32BE(0);\n    result.int32_bcad = b_bcad.readInt32BE(0);\n}\n\n// 64 Bits (Requiere mínimo 4 registros)\nif (regs.length >= 4) {\n    const b8 = Buffer.alloc(8);\n    b8.writeUInt16BE(regs[0], 0);\n    b8.writeUInt16BE(regs[1], 2);\n    b8.writeUInt16BE(regs[2], 4);\n    b8.writeUInt16BE(regs[3], 6);\n    result.int64 = b8.readBigInt64BE(0).toString();\n    result.uint64 = b8.readBigUInt64BE(0).toString();\n}\n\n// Generar salidas individuales para MQTT\n//const mensajes = [];\n//for (const tipo in result) {\n//    mensajes.push({\n//        topic: \"bms/diagnostico/resultado/\" + tipo,\n//        payload: result[tipo]\n//    });\n//}\n//return [mensajes];\nmsg.result = result;\n\nreturn msg;",
+        "func": "const regs = msg.payload;\n\n// Verificar que llegaron datos\nif (!Array.isArray(regs) || regs.length === 0) {\n    node.error(\"No llegaron registros Modbus válidos\");\n    return null;\n}\n\nconst result = {};\n\n// ======================================================\n// REGISTROS CRUDOS\n// ======================================================\n\nresult.raw = regs;\n\n// ======================================================\n// BOOL\n// ======================================================\n\nresult.bool = regs[0] !== 0;\n\n// ======================================================\n// UINT16\n// ======================================================\n\nresult.uint16 = regs[0];\n\n// ======================================================\n// INT16\n// ======================================================\n\n{\n    const b = Buffer.alloc(2);\n\n    b.writeUInt16BE(regs[0], 0);\n\n    result.int16 = b.readInt16BE(0);\n}\n\n// ======================================================\n// DATOS DE 32 BITS\n// Se necesitan mínimo 2 registros\n// ======================================================\n\nif (regs.length >= 2) {\n\n    const r0 = regs[0];\n    const r1 = regs[1];\n\n    // --------------------------------------------------\n    // ABCD\n    // Registro 1 = AB\n    // Registro 2 = CD\n    // --------------------------------------------------\n\n    {\n        const b = Buffer.alloc(4);\n\n        b.writeUInt16BE(r0, 0);\n        b.writeUInt16BE(r1, 2);\n\n        result.int32_abcd = b.readInt32BE(0);\n        result.uint32_abcd = b.readUInt32BE(0);\n        result.float_abcd = b.readFloatBE(0);\n    }\n\n    // --------------------------------------------------\n    // CDAB\n    // Registro 2 primero\n    // Registro 1 después\n    // --------------------------------------------------\n\n    {\n        const b = Buffer.alloc(4);\n\n        b.writeUInt16BE(r1, 0);\n        b.writeUInt16BE(r0, 2);\n\n        result.int32_cdab = b.readInt32BE(0);\n        result.uint32_cdab = b.readUInt32BE(0);\n        result.float_cdab = b.readFloatBE(0);\n    }\n\n    // --------------------------------------------------\n    // BCAD\n    // Intercambio de bytes dentro de cada registro\n    //\n    // ABCD → BADC\n    // --------------------------------------------------\n\n    {\n        const b = Buffer.alloc(4);\n\n        b[0] = r0 & 0xFF;\n        b[1] = (r0 >> 8) & 0xFF;\n\n        b[2] = r1 & 0xFF;\n        b[3] = (r1 >> 8) & 0xFF;\n\n        result.int32_bcad = b.readInt32BE(0);\n        result.uint32_bcad = b.readUInt32BE(0);\n    }\n}\n\n// ======================================================\n// DATOS DE 64 BITS\n// Se necesitan mínimo 4 registros\n// ======================================================\n\nif (regs.length >= 4) {\n\n    const b = Buffer.alloc(8);\n\n    b.writeUInt16BE(regs[0], 0);\n    b.writeUInt16BE(regs[1], 2);\n    b.writeUInt16BE(regs[2], 4);\n    b.writeUInt16BE(regs[3], 6);\n\n    result.int64 = b.readBigInt64BE(0).toString();\n\n    result.uint64 = b.readBigUInt64BE(0).toString();\n}\n\n// ======================================================\n// DEVOLVEMOS TODO\n// ======================================================\n\nmsg.payload = result;\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -1240,7 +1240,6 @@
         "y": 260,
         "wires": [
             [
-                "47c25b9b352dc98f",
                 "85a4662a82a5b899"
             ]
         ]
@@ -1258,7 +1257,7 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 540,
+        "x": 340,
         "y": 80,
         "wires": []
     },
@@ -1292,8 +1291,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 840,
-        "y": 160,
+        "x": 600,
+        "y": 80,
         "wires": []
     },
     {
@@ -1315,10 +1314,10 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "",
-        "payload": "{     \"fc\":4,     \"address\":5,     \"quantity\":2,     \"unitid\":1 }",
+        "payload": "{     \"fc\":3,     \"address\":522,     \"quantity\":1,     \"unitid\":1 }",
         "payloadType": "json",
         "x": 130,
-        "y": 160,
+        "y": 340,
         "wires": [
             [
                 "391c1e7d11659d9d"
@@ -1326,90 +1325,43 @@
         ]
     },
     {
-        "id": "151f971f3e7cee49",
-        "type": "http in",
-        "z": "f65d29de0116f69b",
-        "name": "",
-        "url": "/modbus/read",
-        "method": "post",
-        "upload": false,
-        "skipBodyParsing": false,
-        "swaggerDoc": "",
-        "x": 350,
-        "y": 180,
-        "wires": [
-            [
-                "077a059379384d67",
-                "2ad27bcdfd0fc174"
-            ]
-        ]
-    },
-    {
-        "id": "077a059379384d67",
-        "type": "json",
-        "z": "f65d29de0116f69b",
-        "name": "",
-        "property": "payload",
-        "action": "",
-        "pretty": false,
-        "x": 530,
-        "y": 180,
-        "wires": [
-            [
-                "b3d4e52bb6a381df"
-            ]
-        ]
-    },
-    {
         "id": "b3d4e52bb6a381df",
         "type": "function",
         "z": "f65d29de0116f69b",
-        "name": "function 1",
-        "func": "msg.payload = {\n\n    fc: Number(msg.payload.fc),\n\n    address: Number(msg.payload.address),\n\n    quantity: Number(msg.payload.quantity),\n\n    unitid: Number(msg.payload.unitid)\n\n};\n\nreturn msg;",
+        "name": "Preparar comando",
+        "func": "let req;\n\ntry {\n    req = typeof msg.payload === \"string\"\n        ? JSON.parse(msg.payload)\n        : msg.payload;\n} catch (e) {\n    node.error(\"JSON inválido recibido desde FUXA\");\n    return null;\n}\n\nmsg.payload = {\n    fc: Number(req.fc),\n    address: Number(req.address),\n    quantity: Number(req.quantity),\n    unitid: Number(req.unitid)\n};\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 660,
+        "x": 410,
         "y": 180,
         "wires": [
             [
-                "391c1e7d11659d9d",
-                "edb9f55b2e5f62bf"
+                "edb9f55b2e5f62bf",
+                "47c25b9b352dc98f"
             ]
         ]
-    },
-    {
-        "id": "f1a21c646db9a107",
-        "type": "http response",
-        "z": "f65d29de0116f69b",
-        "name": "",
-        "statusCode": "",
-        "headers": {},
-        "x": 830,
-        "y": 380,
-        "wires": []
     },
     {
         "id": "47c25b9b352dc98f",
         "type": "function",
         "z": "f65d29de0116f69b",
-        "name": "function 2",
-        "func": "msg.payload = {\n\n    status: \"ok\",\n\n    registers: msg.payload,\n\n    decoded: msg.result\n\n};\n\nreturn msg;",
+        "name": "Prepare FlexGetter",
+        "func": "const req = msg.payload;\n\nmsg.payload = {\n    fc: req.fc,\n    unitid: req.unitid,\n    address: req.address,\n    quantity: req.quantity\n};\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 660,
-        "y": 380,
+        "x": 650,
+        "y": 180,
         "wires": [
             [
-                "f1a21c646db9a107",
-                "346773ff2fa47f10"
+                "391c1e7d11659d9d"
             ]
         ]
     },
@@ -1417,15 +1369,15 @@
         "id": "85a4662a82a5b899",
         "type": "function",
         "z": "f65d29de0116f69b",
-        "name": "function 3",
-        "func": "const mensajes = [];\n\nfor (const tipo in msg.result){\n\n    mensajes.push({\n\n        topic:\"bms/diagnostico/resultado/\"+tipo,\n\n        payload:msg.result[tipo]\n\n    });\n\n}\n\nreturn [mensajes];",
+        "name": "Preparar resultados",
+        "func": "const result = msg.payload;\n\nconst mensajes = [];\n\n// ======================================================\n// RECORRER TODOS LOS RESULTADOS\n// ======================================================\n\nfor (const tipo in result) {\n\n    mensajes.push({\n\n        topic: \"bms/diagnostico/resultado/\" + tipo,\n\n        payload: result[tipo]\n\n    });\n}\n\n// Enviar todos los mensajes por la salida 1\n\nreturn [mensajes];",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 700,
+        "x": 730,
         "y": 260,
         "wires": [
             [
@@ -1448,25 +1400,30 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 900,
-        "y": 320,
+        "y": 360,
         "wires": []
     },
     {
-        "id": "346773ff2fa47f10",
-        "type": "debug",
+        "id": "e4193f77f67dbe04",
+        "type": "mqtt in",
         "z": "f65d29de0116f69b",
-        "name": "debug 21",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "true",
-        "targetType": "full",
-        "statusVal": "",
-        "statusType": "auto",
-        "x": 740,
-        "y": 480,
-        "wires": []
+        "name": "",
+        "topic": "bms/diagnostico/comando",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "3bb6fb820dd3038d",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 150,
+        "y": 180,
+        "wires": [
+            [
+                "2ad27bcdfd0fc174",
+                "b3d4e52bb6a381df"
+            ]
+        ]
     },
     {
         "id": "b73e7591b261dcad",
@@ -1487,82 +1444,14 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "",
-        "payload": "{     \"fc\":1,     \"address\":1540,     \"quantity\":1,     \"unitid\":1 }",
+        "payload": "{ \"value\":false,    \"fc\":5,     \"address\":3572,     \"quantity\":1,     \"unitid\":1 }",
         "payloadType": "json",
-        "x": 150,
-        "y": 200,
+        "x": 130,
+        "y": 280,
         "wires": [
             [
-                "a5ea6a8f8b013a96"
+                "de2b2fdd58e85e82"
             ]
-        ]
-    },
-    {
-        "id": "02c3926f17669389",
-        "type": "function",
-        "z": "4ffdac17e98d3ae7",
-        "name": "MQTT Formatter",
-        "func": "const data = msg.payload;\n\nconst gateway = data.gateway;\nconst device = data.deviceId;\n\nconst messages = [];\n\nfor (const pointName in data.measurements) {\n\n    const measurement = data.measurements[pointName];\n\n    messages.push({\n\n        topic: `bms/${gateway}/${device}/${pointName}`,\n\n        payload: {\n\n            value: measurement.value,\n\n            unit: measurement.unit,\n\n            quality: \"GOOD\",\n\n            timestamp: measurement.timestamp\n\n        }\n\n    });\n\n}\n\nmsg.payload = messages;\n\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 410,
-        "y": 360,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "de3b531181c63106",
-        "type": "change",
-        "z": "4ffdac17e98d3ae7",
-        "name": "Cleaner",
-        "rules": [
-            {
-                "t": "set",
-                "p": "topic",
-                "pt": "msg",
-                "to": "payload.topic",
-                "tot": "msg"
-            },
-            {
-                "t": "set",
-                "p": "payload",
-                "pt": "msg",
-                "to": "payload.payload",
-                "tot": "msg"
-            }
-        ],
-        "action": "",
-        "property": "",
-        "from": "",
-        "to": "",
-        "reg": false,
-        "x": 860,
-        "y": 360,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "e239438f93e0c39b",
-        "type": "function",
-        "z": "4ffdac17e98d3ae7",
-        "name": "MQTT Formatter (new)",
-        "func": "const data = msg.payload;\n\nconst gateway = data.gateway;\nconst device = data.deviceId;\n\nconst messages = [];\n\nfor (const pointName in data.measurements) {\n    const measurement = data.measurements[pointName];\n\n    // Creamos un objeto de mensaje totalmente limpio desde cero\n    messages.push({\n        _msgid: msg._msgid, // Mantenemos el ID original de Node-RED por buenas prácticas\n        topic: `bms/${gateway}/${device}/${pointName}`,\n        // Enviamos SOLO el valor numérico crudo para que FUXA lo lea de forma nativa\n        payload: measurement.value \n    });\n}\n\n// Reemplazamos el payload original por nuestro array de mensajes limpios\nmsg.payload = messages;\n\n// Eliminamos de la raíz del mensaje toda la configuración pesada de Modbus\n// para que el nodo split no la herede ni la duplique.\ndelete msg.device;\ndelete msg.driver;\ndelete msg.variables;\ndelete msg.variable;\ndelete msg.gateway;\ndelete msg.modbusRequest;\ndelete msg.responseBuffer;\n\nreturn msg;\n",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 660,
-        "y": 360,
-        "wires": [
-            []
         ]
     },
     {
@@ -1648,6 +1537,73 @@
         "wires": []
     },
     {
+        "id": "de2b2fdd58e85e82",
+        "type": "modbus-flex-write",
+        "z": "4ffdac17e98d3ae7",
+        "name": "SCU write",
+        "showStatusActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "server": "9d8cbf53c2eb4650",
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": true,
+        "delayOnStart": false,
+        "startDelayTime": "",
+        "x": 320,
+        "y": 280,
+        "wires": [
+            [
+                "84675909e39065b1"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "84675909e39065b1",
+        "type": "debug",
+        "z": "4ffdac17e98d3ae7",
+        "name": "debug 23",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 660,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "014401ae5b9eb581",
+        "type": "inject",
+        "z": "4ffdac17e98d3ae7",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{ \"fc\":3,     \"address\":662,     \"quantity\":1,     \"unitid\":1 }",
+        "payloadType": "json",
+        "x": 150,
+        "y": 200,
+        "wires": [
+            [
+                "a5ea6a8f8b013a96"
+            ]
+        ]
+    },
+    {
         "id": "61d32fba33ee7de8",
         "type": "debug",
         "z": "6c26a882f341bc4c",
@@ -1681,6 +1637,74 @@
             [
                 "61d32fba33ee7de8"
             ]
+        ]
+    },
+    {
+        "id": "02c3926f17669389",
+        "type": "function",
+        "z": "6c26a882f341bc4c",
+        "name": "MQTT Formatter",
+        "func": "const data = msg.payload;\n\nconst gateway = data.gateway;\nconst device = data.deviceId;\n\nconst messages = [];\n\nfor (const pointName in data.measurements) {\n\n    const measurement = data.measurements[pointName];\n\n    messages.push({\n\n        topic: `bms/${gateway}/${device}/${pointName}`,\n\n        payload: {\n\n            value: measurement.value,\n\n            unit: measurement.unit,\n\n            quality: \"GOOD\",\n\n            timestamp: measurement.timestamp\n\n        }\n\n    });\n\n}\n\nmsg.payload = messages;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 530.1999816894531,
+        "y": 495.1999816894531,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "de3b531181c63106",
+        "type": "change",
+        "z": "6c26a882f341bc4c",
+        "name": "Cleaner",
+        "rules": [
+            {
+                "t": "set",
+                "p": "topic",
+                "pt": "msg",
+                "to": "payload.topic",
+                "tot": "msg"
+            },
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "payload.payload",
+                "tot": "msg"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 950.1999816894531,
+        "y": 495.1999816894531,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "e239438f93e0c39b",
+        "type": "function",
+        "z": "6c26a882f341bc4c",
+        "name": "MQTT Formatter (new)",
+        "func": "const data = msg.payload;\n\nconst gateway = data.gateway;\nconst device = data.deviceId;\n\nconst messages = [];\n\nfor (const pointName in data.measurements) {\n    const measurement = data.measurements[pointName];\n\n    // Creamos un objeto de mensaje totalmente limpio desde cero\n    messages.push({\n        _msgid: msg._msgid, // Mantenemos el ID original de Node-RED por buenas prácticas\n        topic: `bms/${gateway}/${device}/${pointName}`,\n        // Enviamos SOLO el valor numérico crudo para que FUXA lo lea de forma nativa\n        payload: measurement.value \n    });\n}\n\n// Reemplazamos el payload original por nuestro array de mensajes limpios\nmsg.payload = messages;\n\n// Eliminamos de la raíz del mensaje toda la configuración pesada de Modbus\n// para que el nodo split no la herede ni la duplique.\ndelete msg.device;\ndelete msg.driver;\ndelete msg.variables;\ndelete msg.variable;\ndelete msg.gateway;\ndelete msg.modbusRequest;\ndelete msg.responseBuffer;\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 790.1999816894531,
+        "y": 495.1999816894531,
+        "wires": [
+            []
         ]
     }
 ]

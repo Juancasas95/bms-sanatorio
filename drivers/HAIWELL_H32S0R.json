@@ -56,6 +56,42 @@
       "scan": 2000
     },
 
+    "AlarmAirTankLowPressure": {
+      "name": "Alarma baja presión Tanque Aire médico",
+      "fc": 1,
+      "address": 3392,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+      "AlarmAirTankHighPressure": {
+      "name": "Alarma Alta presión Tanque Aire médico",
+      "fc": 1,
+      "address": 3393,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+     "AlarmAirColectorLowPressure": {
+      "name": "Alarma baja presión Colector Aire médico",
+      "fc": 1,
+      "address": 3396,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+     "AlarmAirColectorHighPressure": {
+      "name": "Alarma Alta presión Colector Aire médico",
+      "fc": 1,
+      "address": 3397,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
     "Compressor1Operative": {
       "name": "Compresor 1 Operativo",
       "fc": 1,
@@ -87,6 +123,69 @@
       "name": "Compresor 2 ON",
       "fc": 1,
       "address": 1537,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "AlarmUseCompressor1": {
+      "name": "Alarma uso Compresor 1",
+      "fc": 1,
+      "address": 3372,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "AlarmUseCompressor2": {
+      "name": "Alarma uso Compresor 2",
+      "fc": 1,
+      "address": 3373,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "AlarmRestCompressor1": {
+      "name": "Alarma descanso Compresor 1",
+      "fc": 1,
+      "address": 3374,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "AlarmRestCompressor2": {
+      "name": "Alarma descanso Compresor 2",
+      "fc": 1,
+      "address": 3375,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "AlarmPerfCompressor1": {
+      "name": "Alarma Rendimiento Compresor 1",
+      "fc": 1,
+      "address": 3382,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "AlarmPerfCompressor2": {
+      "name": "Alarma Rendimiento Compresor 2",
+      "fc": 1,
+      "address": 3383,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "AlarmCompressors": {
+      "name": "Alarma Compresores",
+      "fc": 1,
+      "address": 3472,
       "quantity": 1,
       "type": "bool",
       "scan": 1000
@@ -128,36 +227,91 @@
       "scan": 1000
     },
 
+    "AlarmLowVacuumPressure": {
+      "name": "Alarma baja presión Vacío",
+      "fc": 1,
+      "address": 3322,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "AlarmHighVacuumPressure": {
+      "name": "Alarma alta presión Vacío",
+      "fc": 1,
+      "address": 3323,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "AlarmFaultVacuumSensor": {
+      "name": "Alarma sensor de vacío fallo",
+      "fc": 1,
+      "address": 3327,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "AlarmPerfVacuumPump1": {
+      "name": "Alarma bajo rendimiento Bomba 1",
+      "fc": 1,
+      "address": 3328,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "AlarmPerfVacuumPump2": {
+      "name": "Alarma bajo rendimiento Bomba 2",
+      "fc": 1,
+      "address": 3329,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+    "AlarmVacuumPumps": {
+      "name": "Alarma Bombas de Vacío",
+      "fc": 1,
+      "address": 3371,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000
+    },
+
+
     "Compressor1RunTime": {
       "name": "Tiempo uso Compresor 1",
       "fc": 3,
-      "address": 100,
+      "address": 612,
       "quantity": 1,
       "type": "uint16",
       "multiplier": 1,
       "swap": false,
-      "unit": "min",
+      "unit": "seg",
       "decimals": 0,
-      "scan": 1000
+      "scan": 500
     },
 
     "Compressor1RestTime": {
       "name": "Tiempo descanso Compresor 1",
       "fc": 3,
-      "address": 110,
+      "address": 622,
       "quantity": 1,
       "type": "uint16",
       "multiplier": 1,
       "swap": false,
-      "unit": "min",
+      "unit": "seg",
       "decimals": 0,
-      "scan": 1000
+      "scan": 500
     },
 
     "Compressor1Starts": {
       "name": "Cantidad encendidos Compresor 1",
       "fc": 3,
-      "address": 10,
+      "address": 16394,
       "quantity": 1,
       "type": "uint16",
       "multiplier": 1,
@@ -170,33 +324,33 @@
     "Compressor2RunTime": {
       "name": "Tiempo uso Compresor 2",
       "fc": 3,
-      "address": 130,
+      "address": 642,
       "quantity": 1,
       "type": "uint16",
       "multiplier": 1,
       "swap": false,
-      "unit": "min",
+      "unit": "seg",
       "decimals": 0,
-      "scan": 1000
+      "scan": 500
     },
 
     "Compressor2RestTime": {
       "name": "Tiempo descanso Compresor 2",
       "fc": 3,
-      "address": 140,
+      "address": 652,
       "quantity": 1,
       "type": "uint16",
       "multiplier": 1,
       "swap": false,
       "unit": "min",
       "decimals": 0,
-      "scan": 1000
+      "scan": 500
     },
 
     "Compressor2Starts": {
       "name": "Cantidad encendidos Compresor 2",
       "fc": 3,
-      "address": 11,
+      "address": 16395,
       "quantity": 1,
       "type": "uint16",
       "multiplier": 1,
@@ -204,6 +358,110 @@
       "unit": "",
       "decimals": 0,
       "scan": 5000
+    },
+
+      "Compressor1AccumulatedTime": {
+      "name": "Tiempo uso acumulado Compresor 1",
+      "fc": 3,
+      "address": 522,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 1,
+      "swap": false,
+      "unit": "seg",
+      "decimals": 0,
+      "scan": 500
+    },
+
+      "Compressor2AccumulatedTime": {
+      "name": "Tiempo uso acumulado Compresor 2",
+      "fc": 3,
+      "address": 532,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 1,
+      "swap": false,
+      "unit": "seg",
+      "decimals": 0,
+      "scan": 500
+    },
+
+      "Compressor1RestRelation": {
+      "name": "Relacion descanso Compresor 1",
+      "fc": 3,
+      "address": 632,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 1,
+      "swap": false,
+      "unit": "seg",
+      "decimals": 0,
+      "scan": 1000
+    },
+
+      "Compressor2RestRelation": {
+      "name": "Relacion descanso Compresor 2",
+      "fc": 3,
+      "address": 662,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 1,
+      "swap": false,
+      "unit": "seg",
+      "decimals": 0,
+      "scan": 1000
+    },
+
+      "VacuumPump1RunTime": {
+      "name": "Tiempo uso Bomba 1",
+      "fc": 3,
+      "address": 682,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 1,
+      "swap": false,
+      "unit": "seg",
+      "decimals": 0,
+      "scan": 500
+    },
+
+    "VacuumPump1RestTime": {
+      "name": "Tiempo descanso Bomba 1",
+      "fc": 3,
+      "address": 672,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 1,
+      "swap": false,
+      "unit": "seg",
+      "decimals": 0,
+      "scan": 500
+    },
+
+      "VacuumPump2RunTime": {
+      "name": "Tiempo uso Bomba 2",
+      "fc": 3,
+      "address": 702,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 1,
+      "swap": false,
+      "unit": "seg",
+      "decimals": 0,
+      "scan": 500
+    },
+
+    "VacuumPump2RestTime": {
+      "name": "Tiempo descanso Bomba 2",
+      "fc": 3,
+      "address": 692,
+      "quantity": 1,
+      "type": "uint16",
+      "multiplier": 1,
+      "swap": false,
+      "unit": "seg",
+      "decimals": 0,
+      "scan": 500
     }
   }
 }
