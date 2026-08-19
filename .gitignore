@@ -30,6 +30,15 @@ nodered/.sessions.json
 # Credenciales (NO subir nunca)
 nodered/flows_cred.json
 
+# WhatsApp runtime / sesión / mensajes
+nodered/whatsapp-api/
+
+# Backups automáticos
+nodered/*.backup
+
+# Credenciales (NO subir nunca)
+nodered/flows_cred.json
+
 # Backups automáticos
 nodered/*.backup
 
