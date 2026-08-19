@@ -588,5 +588,48 @@
                 "file": "/data/node_modules/node-red-contrib-modbus/modbus/modbus-flex-fc.js"
             }
         }
+    },
+    "node-red-contrib-whatsapp-api": {
+        "name": "node-red-contrib-whatsapp-api",
+        "version": "0.1.2",
+        "local": true,
+        "user": true,
+        "nodes": {
+            "whatsapp-api": {
+                "name": "whatsapp-api",
+                "types": [
+                    "whatsapp-api-config",
+                    "whatsapp-api-in",
+                    "whatsapp-api-send",
+                    "whatsapp-api-history"
+                ],
+                "enabled": true,
+                "local": true,
+                "user": false,
+                "module": "node-red-contrib-whatsapp-api",
+                "file": "/data/node_modules/node-red-contrib-whatsapp-api/dist/nodes/whatsapp-api.js"
+            }
+        }
+    },
+    "node-red-node-email": {
+        "name": "node-red-node-email",
+        "version": "5.2.5",
+        "local": true,
+        "user": true,
+        "nodes": {
+            "email": {
+                "name": "email",
+                "types": [
+                    "e-mail",
+                    "e-mail in",
+                    "e-mail mta"
+                ],
+                "enabled": true,
+                "local": true,
+                "user": false,
+                "module": "node-red-node-email",
+                "file": "/data/node_modules/node-red-node-email/61-email.js"
+            }
+        }
     }
 }

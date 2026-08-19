@@ -52,6 +52,30 @@
         "type": "tab",
         "label": "50 - MQTT Explorer",
         "disabled": false,
+        "info": "Toma valores de: direccion, fc, cantidad,\r\nvalor para realizar consultas en Modbus y\r\nasí poder saber el tipo de dato y \r\ndecodificar los valores",
+        "env": []
+    },
+    {
+        "id": "434aa09526dd2e21",
+        "type": "tab",
+        "label": "60 - Modbus Writer",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "ee9e20c7532940ba",
+        "type": "tab",
+        "label": "70 - Alarm Engine",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "087926ec68603352",
+        "type": "tab",
+        "label": "80 - Notification Engine",
+        "disabled": false,
         "info": "",
         "env": []
     },
@@ -70,6 +94,13 @@
         "disabled": false,
         "info": "",
         "env": []
+    },
+    {
+        "id": "a1f4d7c2e9b00101",
+        "type": "tab",
+        "label": "WhatsApp Example",
+        "disabled": false,
+        "info": ""
     },
     {
         "id": "126e4fa809698f73",
@@ -161,6 +192,14 @@
         "showErrors": false,
         "showWarnings": true,
         "showLogs": true
+    },
+    {
+        "id": "b2f4d7c2e9b00102",
+        "type": "whatsapp-api-config",
+        "dataDir": "",
+        "name": "My WhatsApp",
+        "reconnectMaxMs": "30000",
+        "reconnectMinMs": "2000"
     },
     {
         "id": "9b9982ad2806f380",
@@ -763,24 +802,6 @@
         ]
     },
     {
-        "id": "d04af16379baaa94",
-        "type": "function",
-        "z": "291f91c97ecd24c1",
-        "name": "Decode Value",
-        "func": "const regs = msg.payload;\n\nif (!Array.isArray(regs)) {\n    return null;\n}\n\nconst variable = msg.variable;\n\nlet value = null;\n\n//==================================================\n// UINT16\n//==================================================\nif (variable.type === \"uint16\") {\n\n    value = regs[0];\n\n}\n\n//==================================================\n// INT16\n//==================================================\nelse if (variable.type === \"int16\") {\n\n    const buffer = Buffer.alloc(2);\n    buffer.writeUInt16BE(regs[0],0);\n    value = buffer.readInt16BE(0);\n\n}\n\n//==================================================\n// UINT32\n//==================================================\nelse if (variable.type === \"uint32\") {\n\n    // Si llegaron 4 registros, usamos solamente los dos primeros.\n    // Esto ocurre en algunos equipos (como el SCU200) que reservan\n    // espacio para una futura expansión a 64 bits.\n\n    const r0 = regs[0];\n    const r1 = regs[1];\n\n    if (variable.swap === true) {\n\n        value = ((r0 << 16) >>> 0) + r1;\n\n    } else {\n\n        value = ((r1 << 16) >>> 0) + r0;\n\n    }\n\n}\n\n//==================================================\n// INT32\n//==================================================\nelse if (variable.type === \"int32\") {\n\n    const buffer = Buffer.alloc(4);\n\n    if (variable.swap === true) {\n\n        buffer.writeUInt16BE(regs[1],0);\n        buffer.writeUInt16BE(regs[0],2);\n\n    } else {\n\n        buffer.writeUInt16BE(regs[0],0);\n        buffer.writeUInt16BE(regs[1],2);\n\n    }\n\n    value = buffer.readInt32BE(0);\n\n}\n\n//==================================================\n// FLOAT\n//==================================================\nelse if (variable.type === \"float\") {\n\n    const buffer = Buffer.alloc(4);\n\n    if (variable.swap === true) {\n\n        buffer.writeUInt16BE(regs[1],0);\n        buffer.writeUInt16BE(regs[0],2);\n\n    } else {\n\n        buffer.writeUInt16BE(regs[0],0);\n        buffer.writeUInt16BE(regs[1],2);\n\n    }\n\n    value = buffer.readFloatBE(0);\n\n}\n\n//==================================================\n\nelse {\n\n    node.error(\"Tipo desconocido: \" + variable.type);\n    return null;\n\n}\n\n// Aplicar multiplicador (viejo)\n\nif (variable.multiplier !== undefined) {\n\n    value *= variable.multiplier;\n\n}\n\n// Redondeo\n\nif (variable.decimals !== undefined) {\n\n    value = Number(value.toFixed(variable.decimals));\n\n}\n\nmsg.payload = {\n    value: value\n};\n\nreturn msg;\n\n",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 500,
-        "y": 580,
-        "wires": [
-            []
-        ]
-    },
-    {
         "id": "23d8ed7fe8b8e56c",
         "type": "function",
         "z": "291f91c97ecd24c1",
@@ -792,7 +813,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 750,
+        "x": 790,
         "y": 340,
         "wires": [
             [
@@ -821,7 +842,7 @@
         "type": "function",
         "z": "291f91c97ecd24c1",
         "name": "Buid Job (new)",
-        "func": "const device = msg.device;\n\nif (!device) {\n    node.error(\"No llegó ningún dispositivo.\");\n    return null;\n}\n\nif (!device.driver) {\n    node.error(\"El dispositivo no tiene driver.\");\n    return null;\n}\n\nconst jobs = [];\n\n// Base de tiempos de adquisición\nlet scanState = global.get(\"scanState\") || {};\n\nconst now = Date.now();\n\nfor (const pointName of Object.keys(device.driver.variables)) {\n\n    const variable = device.driver.variables[pointName];\n\n    if (!variable) {\n        node.warn(`La variable ${pointName} no existe en el driver ${device.driver.id}`);\n        continue;\n    }\n\n    // Identificador único de la variable\n    const key = `${device.id}.${pointName}`;\n\n    const lastRead = scanState[key] || 0;\n\n    // Si no existe scan, leer siempre\n    const scan = Number(variable.scan ?? 1000);\n\n    if (scan > 0 && (now - lastRead) < scan) {\n        continue;\n    }\n\n    // Actualizar instante de lectura\n    scanState[key] = now;\n\n    jobs.push({\n\n        device: device,\n\n        point: pointName,\n\n        variable: variable,\n\n        request: {\n\n            unitid: device.slave,\n\n            fc: variable.fc,\n\n            address: variable.address,\n\n            quantity: variable.quantity\n\n        }\n\n    });\n\n}\n\nglobal.set(\"scanState\", scanState);\n\nif (jobs.length === 0) {\n    return null;\n}\n\nmsg.payload = jobs;\n\nreturn msg;",
+        "func": "const device = msg.device;\n\nif (!device) {\n    node.error(\"No llegó ningún dispositivo.\");\n    return null;\n}\n\nif (!device.driver) {\n    node.error(\"El dispositivo no tiene driver.\");\n    return null;\n}\n\nconst jobs = [];\n\n// Base de tiempos de adquisición\nlet scanState = global.get(\"scanState\") || {};\n\nconst now = Date.now();\n\nfor (const pointName of Object.keys(device.driver.variables)) {\n\n    const variable = device.driver.variables[pointName];\n\n    if (!variable) {\n        node.warn(`La variable ${pointName} no existe en el driver ${device.driver.id}`);\n        continue;\n    }\n    \n    // Solo variables configuradas para lectura\n    if (variable.read !== true) {\n        continue;\n    }\n\n    // Identificador único de la variable\n    const key = `${device.id}.${pointName}`;\n\n    const lastRead = scanState[key] || 0;\n\n    // Si no existe scan, leer siempre\n    const scan = Number(variable.scan ?? 1000);\n\n    if (scan > 0 && (now - lastRead) < scan) {\n        continue;\n    }\n\n    // Actualizar instante de lectura\n    scanState[key] = now;\n\n    jobs.push({\n\n        device: device,\n\n        point: pointName,\n\n        variable: variable,\n\n        request: {\n\n            unitid: device.slave,\n\n            fc: variable.fc,\n\n            address: variable.address,\n\n            quantity: variable.quantity\n\n        }\n\n    });\n\n}\n\nglobal.set(\"scanState\", scanState);\n\nif (jobs.length === 0) {\n    return null;\n}\n\nmsg.payload = jobs;\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -846,27 +867,9 @@
         "links": [
             "173c9315cf6a3d0e"
         ],
-        "x": 905,
+        "x": 925,
         "y": 340,
         "wires": []
-    },
-    {
-        "id": "cb9cc3c9aaafed34",
-        "type": "function",
-        "z": "291f91c97ecd24c1",
-        "name": "Buid Job",
-        "func": "const device = msg.device;\n\nif (!device) {\n    node.error(\"No llegó ningún dispositivo.\");\n    return null;\n}\n\nif (!device.driver) {\n    node.error(\"El dispositivo no tiene driver.\");\n    return null;\n}\n\n//if (!Array.isArray(device.points)) {\n//    node.error(\"El dispositivo no tiene lista de puntos.\");\n//    return null;\n//}\n\nconst jobs = [];\n\nfor (const pointName of Object.keys(device.driver.variables)) {// con objects keys, dejamos de depender del puntero en devices.json\n\n    const variable = device.driver.variables[pointName];\n\n    if (!variable) {\n\n        node.warn(`La variable ${pointName} no existe en el driver ${device.driver.id}`);\n\n        continue;\n    }\n\n    jobs.push({\n\n        device: device,\n\n        point: pointName,\n\n        variable: variable,\n\n        request: {\n\n            unitid: device.slave,\n\n            fc: variable.fc,\n\n            address: variable.address,\n\n            quantity: variable.quantity\n\n        }\n\n    });\n\n}\n\nmsg.payload = jobs;\n\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 320,
-        "y": 500,
-        "wires": [
-            []
-        ]
     },
     {
         "id": "76bdad645dc61b4a",
@@ -881,8 +884,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 760,
-        "y": 440,
+        "x": 460,
+        "y": 460,
         "wires": []
     },
     {
@@ -918,24 +921,6 @@
         "x": 900,
         "y": 40,
         "wires": []
-    },
-    {
-        "id": "ae24dbfdd08501e6",
-        "type": "function",
-        "z": "291f91c97ecd24c1",
-        "name": "Buid Measurement",
-        "func": "const deviceId = msg.device.id;\n\nif (!deviceId) {\n    node.error(\"No existe device.id\");\n    return null;\n}\n\nlet cache = flow.get(\"measurements\") || {};\n\n// Crear almacenamiento del dispositivo\nif (!cache[deviceId]) {\n    cache[deviceId] = {};\n}\n\n// Guardar la variable recibida\ncache[deviceId][msg.point] = {\n\n    name: msg.variable.name,\n\n    value: msg.payload.value,\n\n    unit: msg.variable.unit,\n\n    timestamp: new Date().toISOString()\n\n};\n\n// Guardar nuevamente el cache\nflow.set(\"measurements\", cache);\n\n// ¿Cuántos puntos esperamos para este dispositivo? va a contar automaticamente segun las variables que tenga el driver\nconst expectedPoints = Object.keys(msg.device.driver.variables).length;\n\n// Si todavía faltan variables, esperamos\nif (Object.keys(cache[deviceId]).length < expectedPoints) {\n    return null;\n}\n\n//======================================================\n// Todas las variables fueron adquiridas\n//======================================================\n\nmsg.payload = {\n\n    deviceId: deviceId,\n\n    deviceName: msg.device.name,\n\n    gateway: msg.device.gateway.id,\n\n    driver: msg.device.driver.id,\n\n    timestamp: new Date().toISOString(),\n\n    measurements: cache[deviceId]\n\n};\n\n// Limpiar memoria para el próximo ciclo\ndelete cache[deviceId];\n\nflow.set(\"measurements\", cache);\n\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 490,
-        "y": 500,
-        "wires": [
-            []
-        ]
     },
     {
         "id": "6d25218f209cdd9b",
@@ -1021,7 +1006,7 @@
         "type": "function",
         "z": "291f91c97ecd24c1",
         "name": "Decode Value (new switch)",
-        "func": "const regs = msg.payload;\n\nif (!Array.isArray(regs)) {\n    return null;\n}\n\nconst variable = msg.variable;\n\nlet value;\n\n//==================================================\n// Decodificación según tipo\n//==================================================\n\nswitch (variable.type) {\n\n    //--------------------------------------------------\n    // BOOL\n    //--------------------------------------------------\n    case \"bool\":\n        //value = !!regs[0];\n        value = regs[0] ? 1 : 0;//acondicionamos el dato a realbool\n        break;\n\n    //--------------------------------------------------\n    // UINT16\n    //--------------------------------------------------\n    case \"uint16\":\n        value = regs[0];\n        break;\n\n    //--------------------------------------------------\n    // INT16\n    //--------------------------------------------------\n    case \"int16\": {\n\n        const buffer = Buffer.alloc(2);\n        buffer.writeUInt16BE(regs[0], 0);\n        value = buffer.readInt16BE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // UINT32\n    //--------------------------------------------------\n    case \"uint32\": {\n\n        const r0 = regs[0];\n        const r1 = regs[1];\n\n        if (variable.swap) {\n            value = ((r0 << 16) >>> 0) + r1;\n        } else {\n            value = ((r1 << 16) >>> 0) + r0;\n        }\n\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // INT32\n    //--------------------------------------------------\n    case \"int32\": {\n\n        const buffer = Buffer.alloc(4);\n\n        if (variable.swap) {\n            buffer.writeUInt16BE(regs[1], 0);\n            buffer.writeUInt16BE(regs[0], 2);\n        } else {\n            buffer.writeUInt16BE(regs[0], 0);\n            buffer.writeUInt16BE(regs[1], 2);\n        }\n\n        value = buffer.readInt32BE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // FLOAT\n    //--------------------------------------------------\n    case \"float\": {\n\n        const buffer = Buffer.alloc(4);\n\n        if (variable.swap) {\n            buffer.writeUInt16BE(regs[1], 0);\n            buffer.writeUInt16BE(regs[0], 2);\n        } else {\n            buffer.writeUInt16BE(regs[0], 0);\n            buffer.writeUInt16BE(regs[1], 2);\n        }\n\n        value = buffer.readFloatBE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // DOUBLE (reservado)\n    //--------------------------------------------------\n    case \"double\":\n        node.error(\"Tipo DOUBLE aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // UINT64 (reservado)\n    //--------------------------------------------------\n    case \"uint64\":\n        node.error(\"Tipo UINT64 aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // INT64 (reservado)\n    //--------------------------------------------------\n    case \"int64\":\n        node.error(\"Tipo INT64 aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // STRING (reservado)\n    //--------------------------------------------------\n    case \"string\":\n        node.error(\"Tipo STRING aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // Desconocido\n    //--------------------------------------------------\n    default:\n        node.error(`Tipo desconocido: ${variable.type}`);\n        return null;\n}\n\n//==================================================\n// Post-procesado (solo números)\n//==================================================\n\nif (typeof value === \"number\") {\n\n    if (variable.multiplier !== undefined) {\n        value *= variable.multiplier;\n    }\n\n    if (variable.decimals !== undefined) {\n        value = Number(value.toFixed(variable.decimals));\n    }\n\n}\n\n//==================================================\n\nmsg.payload = {\n    value: value\n};\n\nreturn msg;",
+        "func": "const regs = msg.payload;\n\nif (!Array.isArray(regs)) {\n    return null;\n}\n\nconst variable = msg.variable;\nlet value;\n\n//==================================================\n// Decodificación según tipo\n//==================================================\nswitch (variable.type) {\n\n    case \"bool\":\n        value = regs[0] ? 1 : 0;\n        break;\n\n    case \"uint16\":\n        value = regs[0];\n        break;\n\n    case \"int16\": {\n        const buffer = Buffer.alloc(2);\n        buffer.writeUInt16BE(regs[0], 0);\n        value = buffer.readInt16BE(0);\n        break;\n    }\n\n    case \"uint32\": {\n        const r0 = regs[0];\n        const r1 = regs[1];\n        if (variable.swap) {\n            value = ((r0 << 16) >>> 0) + r1;\n        } else {\n            value = ((r1 << 16) >>> 0) + r0;\n        }\n        break;\n    }\n\n    case \"int32\": {\n        const buffer = Buffer.alloc(4);\n        if (variable.swap) {\n            buffer.writeUInt16BE(regs[1], 0);\n            buffer.writeUInt16BE(regs[0], 2);\n        } else {\n            buffer.writeUInt16BE(regs[0], 0);\n            buffer.writeUInt16BE(regs[1], 2);\n        }\n        value = buffer.readInt32BE(0);\n        break;\n    }\n\n    case \"float\": {\n        const buffer = Buffer.alloc(4);\n        if (variable.swap) {\n            buffer.writeUInt16BE(regs[1], 0);\n            buffer.writeUInt16BE(regs[0], 2);\n        } else {\n            buffer.writeUInt16BE(regs[0], 0);\n            buffer.writeUInt16BE(regs[1], 2);\n        }\n        value = buffer.readFloatBE(0);\n        break;\n    }\n\n        //--------------------------------------------------\n    // NUEVO Y CORREGIDO: BITMASK \n    //--------------------------------------------------\n    case \"bitmask\": {\n        // Extraemos el primer registro del array Modbus (igual que haces en uint16)\n        const wordValue = regs[0]; \n        \n        if (wordValue === undefined) {\n            node.error(\"Bitmask: No se recibieron datos en regs[0]\");\n            return null;\n        }\n        \n        // Si el driver tiene definido el mapeo de bits en el JSON\n        if (variable.bits && typeof variable.bits === \"object\") {\n            \n            // Recorremos cada bit configurado en el JSON\n            for (const bitIndex in variable.bits) {\n                const bitConfig = variable.bits[bitIndex];\n                const index = parseInt(bitIndex, 10);\n                \n                // Evaluamos si el bit específico está en 1 o 0\n                const bitValue = ((wordValue >> index) & 1) === 1 ? 1 : 0;\n                \n                // Clonamos el mensaje completo para preservar TODAS las propiedades originales \n                // (device, gateway, parts, _event, topic, etc.)\n                let newMsg = RED.util.cloneMessage(msg);\n                \n                // Sobrescribimos las propiedades clave para que \"Build Measurement\" y \"MQTT Formatter\" las procesen\n                newMsg.point = bitConfig.point;         // Reemplaza el tag base (ej: de \"AlarmBlock1\" a \"Alarma_Baja_Presion\")\n                newMsg.variable.name = bitConfig.name;  // Reemplaza el nombre legible de la alarma\n                newMsg.variable.type = \"bool\";          // Forzamos a tipo bool para consistencia interna\n                \n                // Entregamos el valor limpio dentro del payload esperado por la fase de post-procesado\n                newMsg.payload = {\n                    value: bitValue\n                };\n                \n                // Despachamos el mensaje de este bit de forma independiente\n                node.send(newMsg);\n            }\n            \n            // Retornamos null para \"matar\" el mensaje original del bloque completo y evitar duplicados\n            return null; \n        }\n        \n        node.error(\"Tipo bitmask seleccionado pero no se encontraron 'bits' definidos en el JSON.\");\n        return null;\n    }\n\n    default:\n        node.error(`Tipo desconocido: ${variable.type}`);\n        return null;\n}\n\n//==================================================\n// Post-procesado (solo números estándar, no entra bitmask)\n//==================================================\nif (typeof value === \"number\") {\n    if (variable.multiplier !== undefined) {\n        value *= variable.multiplier;\n    }\n    if (variable.decimals !== undefined) {\n        value = Number(value.toFixed(variable.decimals));\n    }\n}\n\n//==================================================\nmsg.payload = {\n    value: value\n};\n\nreturn msg;\n",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -1033,7 +1018,8 @@
         "wires": [
             [
                 "23d8ed7fe8b8e56c",
-                "f5aad37c0bb57b88"
+                "f5aad37c0bb57b88",
+                "61a49460c5c82be4"
             ]
         ]
     },
@@ -1067,8 +1053,21 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 780,
+        "x": 760,
         "y": 260,
+        "wires": []
+    },
+    {
+        "id": "61a49460c5c82be4",
+        "type": "link out",
+        "z": "291f91c97ecd24c1",
+        "name": "link out 4",
+        "mode": "link",
+        "links": [
+            "ea9ea0d016079e1c"
+        ],
+        "x": 725,
+        "y": 420,
         "wires": []
     },
     {
@@ -1192,18 +1191,18 @@
         "correl": "",
         "expiry": "",
         "broker": "3bb6fb820dd3038d",
-        "x": 930,
-        "y": 260,
+        "x": 870,
+        "y": 520,
         "wires": []
     },
     {
         "id": "391c1e7d11659d9d",
         "type": "modbus-flex-getter",
         "z": "f65d29de0116f69b",
-        "name": "Modbus",
+        "name": "Haiwell",
         "showStatusActivities": false,
-        "showErrors": false,
-        "showWarnings": true,
+        "showErrors": true,
+        "showWarnings": false,
         "logIOActivities": false,
         "server": "9d8cbf53c2eb4650",
         "useIOFile": false,
@@ -1214,12 +1213,11 @@
         "delayOnStart": false,
         "enableDeformedMessages": false,
         "startDelayTime": "",
-        "x": 320,
-        "y": 260,
+        "x": 640,
+        "y": 360,
         "wires": [
             [
-                "aefcd7a703c2ba1d",
-                "6952b526feded966"
+                "aefcd7a703c2ba1d"
             ],
             []
         ]
@@ -1236,8 +1234,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 520,
-        "y": 260,
+        "x": 820,
+        "y": 320,
         "wires": [
             [
                 "85a4662a82a5b899"
@@ -1274,8 +1272,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 440,
-        "y": 360,
+        "x": 240,
+        "y": 260,
         "wires": []
     },
     {
@@ -1296,52 +1294,23 @@
         "wires": []
     },
     {
-        "id": "42268f97d226449f",
-        "type": "inject",
-        "z": "f65d29de0116f69b",
-        "name": "",
-        "props": [
-            {
-                "p": "payload"
-            },
-            {
-                "p": "topic",
-                "vt": "str"
-            }
-        ],
-        "repeat": "",
-        "crontab": "",
-        "once": false,
-        "onceDelay": 0.1,
-        "topic": "",
-        "payload": "{     \"fc\":4,     \"address\":5,     \"quantity\":2,     \"unitid\":1 }",
-        "payloadType": "json",
-        "x": 130,
-        "y": 340,
-        "wires": [
-            [
-                "391c1e7d11659d9d"
-            ]
-        ]
-    },
-    {
         "id": "b3d4e52bb6a381df",
         "type": "function",
         "z": "f65d29de0116f69b",
         "name": "Preparar comando",
-        "func": "let req;\n\ntry {\n    req = typeof msg.payload === \"string\"\n        ? JSON.parse(msg.payload)\n        : msg.payload;\n} catch (e) {\n    node.error(\"JSON inválido recibido desde FUXA\");\n    return null;\n}\n\nmsg.payload = {\n    fc: Number(req.fc),\n    address: Number(req.address),\n    quantity: Number(req.quantity),\n    unitid: Number(req.unitid)\n};\n\nreturn msg;",
+        "func": "const req = msg.payload;\n\n// Verificar que llegó un objeto\nif (!req || typeof req !== \"object\") {\n    node.error(\"El comando recibido no es un objeto\");\n    return null;\n}\n\n// Convertir y validar parámetros\nconst fc = parseInt(req.fc);\nconst address = parseInt(req.address);\nconst quantity = parseInt(req.quantity);\nconst unitid = parseInt(req.unitid);\nconst gateway = parseInt(req.gateway);\n\nif (isNaN(fc)) {\n    node.error(\"FC inválido\");\n    return null;\n}\n\nif (isNaN(address)) {\n    node.error(\"Address inválido\");\n    return null;\n}\n\nif (isNaN(quantity)) {\n    node.error(\"Quantity inválido\");\n    return null;\n}\n\nif (isNaN(unitid)) {\n    node.error(\"Unit ID inválido\");\n    return null;\n}\n\nif (isNaN(gateway)) {\n    node.error(\"Gateway inválido\");\n    return null;\n}\n\n// Construir comando limpio\nmsg.payload = {\n    fc: fc,\n    address: address,\n    quantity: quantity,\n    unitid: unitid,\n    gateway: gateway\n};\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 410,
-        "y": 180,
+        "x": 550,
+        "y": 140,
         "wires": [
             [
                 "edb9f55b2e5f62bf",
-                "47c25b9b352dc98f"
+                "edf38f19ddf96a03"
             ]
         ]
     },
@@ -1357,11 +1326,12 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 650,
-        "y": 180,
+        "x": 450,
+        "y": 300,
         "wires": [
             [
-                "391c1e7d11659d9d"
+                "0020594890f2552c",
+                "32ab171cad5875a9"
             ]
         ]
     },
@@ -1377,12 +1347,12 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 730,
-        "y": 260,
+        "x": 630,
+        "y": 520,
         "wires": [
             [
                 "da6bd6ab39cd0f06",
-                "32ab171cad5875a9"
+                "9f2eba0e07397903"
             ]
         ]
     },
@@ -1391,7 +1361,7 @@
         "type": "debug",
         "z": "f65d29de0116f69b",
         "name": "debug 20",
-        "active": false,
+        "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -1399,8 +1369,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 900,
-        "y": 360,
+        "x": 640,
+        "y": 260,
         "wires": []
     },
     {
@@ -1416,8 +1386,8 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 150,
-        "y": 180,
+        "x": 290,
+        "y": 140,
         "wires": [
             [
                 "2ad27bcdfd0fc174",
@@ -1426,104 +1396,93 @@
         ]
     },
     {
-        "id": "b73e7591b261dcad",
-        "type": "inject",
-        "z": "4ffdac17e98d3ae7",
-        "name": "",
-        "props": [
+        "id": "edf38f19ddf96a03",
+        "type": "switch",
+        "z": "f65d29de0116f69b",
+        "name": "gateway",
+        "property": "payload.gateway",
+        "propertyType": "msg",
+        "rules": [
             {
-                "p": "payload"
+                "t": "eq",
+                "v": "1",
+                "vt": "num"
             },
             {
-                "p": "topic",
-                "vt": "str"
+                "t": "eq",
+                "v": "2",
+                "vt": "num"
             }
         ],
-        "repeat": "",
-        "crontab": "",
-        "once": false,
-        "onceDelay": 0.1,
-        "topic": "",
-        "payload": "{ \"value\":false,    \"fc\":5,     \"address\":3572,     \"quantity\":1,     \"unitid\":1 }",
-        "payloadType": "json",
-        "x": 130,
-        "y": 280,
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 240,
+        "y": 340,
         "wires": [
             [
-                "de2b2fdd58e85e82"
+                "6952b526feded966",
+                "47c25b9b352dc98f"
+            ],
+            [
+                "6952b526feded966",
+                "fe39a1955ff02230"
             ]
         ]
     },
     {
-        "id": "a5ea6a8f8b013a96",
+        "id": "0020594890f2552c",
         "type": "modbus-flex-getter",
-        "z": "4ffdac17e98d3ae7",
-        "name": "",
+        "z": "f65d29de0116f69b",
+        "name": "SCU200",
         "showStatusActivities": false,
         "showErrors": false,
         "showWarnings": true,
         "logIOActivities": false,
-        "server": "9d8cbf53c2eb4650",
+        "server": "126e4fa809698f73",
         "useIOFile": false,
         "ioFile": "",
         "useIOForPayload": false,
         "emptyMsgOnFail": false,
-        "keepMsgProperties": false,
+        "keepMsgProperties": true,
         "delayOnStart": false,
         "enableDeformedMessages": false,
         "startDelayTime": "",
-        "x": 330,
-        "y": 200,
+        "x": 640,
+        "y": 300,
         "wires": [
             [
-                "f7298e8410cb5aa2",
-                "1a91bdf63a4d3a0a"
+                "aefcd7a703c2ba1d"
             ],
             []
         ]
     },
     {
-        "id": "1afae2ceb51a05bf",
-        "type": "debug",
-        "z": "4ffdac17e98d3ae7",
-        "name": "debug 13",
-        "active": true,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "payload",
-        "targetType": "msg",
-        "statusVal": "",
-        "statusType": "auto",
-        "x": 760,
-        "y": 200,
-        "wires": []
-    },
-    {
-        "id": "f7298e8410cb5aa2",
+        "id": "fe39a1955ff02230",
         "type": "function",
-        "z": "4ffdac17e98d3ae7",
-        "name": "decode",
-        "func": "const regs = msg.payload;\n\nif (!Array.isArray(regs)) {\n    node.error(\"No llegaron registros\");\n    return null;\n}\n\nnode.warn(\"Registros recibidos: \" + JSON.stringify(regs));\n\nconst result = {};\n\ntry {\n\n    // Bool\n    result.bool = !!regs[0];\n\n    // UInt16\n    result.uint16 = regs[0];\n\n    // Int16\n    {\n        const b = Buffer.alloc(2);\n        b.writeUInt16BE(regs[0],0);\n        result.int16 = b.readInt16BE(0);\n    }\n\n    if (regs.length >= 2){\n\n        // Float ABCD\n        {\n            const b = Buffer.alloc(4);\n            b.writeUInt16BE(regs[0],0);\n            b.writeUInt16BE(regs[1],2);\n            result.float_ABCD = b.readFloatBE(0);\n        }\n\n        // Float CDAB\n        {\n            const b = Buffer.alloc(4);\n            b.writeUInt16BE(regs[1],0);\n            b.writeUInt16BE(regs[0],2);\n            result.float_CDAB = b.readFloatBE(0);\n        }\n\n        // UInt32 ABCD\n        result.uint32_ABCD =\n            ((regs[0] << 16) >>>0) + regs[1];\n\n        // UInt32 CDAB\n        result.uint32_CDAB =\n            ((regs[1] << 16) >>>0) + regs[0];\n\n        // Int32 ABCD\n        {\n            const b = Buffer.alloc(4);\n            b.writeUInt16BE(regs[0],0);\n            b.writeUInt16BE(regs[1],2);\n            result.int32_ABCD = b.readInt32BE(0);\n        }\n\n        // Int32 CDAB\n        {\n            const b = Buffer.alloc(4);\n            b.writeUInt16BE(regs[1],0);\n            b.writeUInt16BE(regs[0],2);\n            result.int32_CDAB = b.readInt32BE(0);\n        }\n\n    }\n\n}\ncatch(err){\n    node.error(err.message);\n}\n\nmsg.payload = result;\n\nreturn msg;",
+        "z": "f65d29de0116f69b",
+        "name": "Prepare FlexGetter",
+        "func": "const req = msg.payload;\n\nmsg.payload = {\n    fc: req.fc,\n    unitid: req.unitid,\n    address: req.address,\n    quantity: req.quantity\n};\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 560,
-        "y": 200,
+        "x": 450,
+        "y": 360,
         "wires": [
             [
-                "1afae2ceb51a05bf"
+                "391c1e7d11659d9d",
+                "f64394ed8b43487c"
             ]
         ]
     },
     {
-        "id": "1a91bdf63a4d3a0a",
+        "id": "f64394ed8b43487c",
         "type": "debug",
-        "z": "4ffdac17e98d3ae7",
-        "name": "debug 22",
+        "z": "f65d29de0116f69b",
+        "name": "debug 21",
         "active": true,
         "tosidebar": true,
         "console": false,
@@ -1532,15 +1491,374 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 580,
-        "y": 120,
+        "x": 640,
+        "y": 400,
         "wires": []
     },
     {
-        "id": "de2b2fdd58e85e82",
+        "id": "9f2eba0e07397903",
+        "type": "debug",
+        "z": "f65d29de0116f69b",
+        "name": "debug 24",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 860,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "ca46874dcc29f8cb",
+        "type": "mqtt in",
+        "z": "434aa09526dd2e21",
+        "name": "",
+        "topic": "bms/+/+/+/write",
+        "qos": "0",
+        "datatype": "auto-detect",
+        "broker": "3bb6fb820dd3038d",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 340,
+        "y": 160,
+        "wires": [
+            [
+                "87897336bc993962"
+            ]
+        ]
+    },
+    {
+        "id": "87897336bc993962",
+        "type": "function",
+        "z": "434aa09526dd2e21",
+        "name": "Parse Write Command",
+        "func": "// Topic esperado:\n// bms/<gateway>/<device>/<variable>/write\n\nconst parts = msg.topic.split(\"/\");\n\nif (parts.length !== 5) {\n    node.error(\"Topic MQTT inválido: \" + msg.topic);\n    return null;\n}\n\nif (\n    parts[0] !== \"bms\" ||\n    parts[4] !== \"write\"\n) {\n    node.error(\"Topic no corresponde a una escritura: \" + msg.topic);\n    return null;\n}\n\nconst gatewayId = parts[1];\nconst deviceId = parts[2];\nconst variableName = parts[3];\n\n// Convertimos el payload a texto\nlet value = String(msg.payload).trim();\n\n//--------------------------------------\n// BOOL\n//--------------------------------------\n\nif (value.toLowerCase() === \"true\") {\n    value = true;\n}\nelse if (value.toLowerCase() === \"false\") {\n    value = false;\n}\n\n//--------------------------------------\n// NUMBER\n//--------------------------------------\n\nelse if (value !== \"\" && !isNaN(value)) {\n    value = Number(value);\n}\n\n//--------------------------------------\n// Validación\n//--------------------------------------\n\nif (value === \"\") {\n    node.error(\"No se recibió ningún valor.\");\n    return null;\n}\n\nmsg.writeRequest = {\n\n    gateway: gatewayId,\n\n    device: deviceId,\n\n    variable: variableName,\n\n    value: value\n\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 160,
+        "wires": [
+            [
+                "278dbdeb928e3a77",
+                "06bdbc2acfe5ec0b"
+            ]
+        ]
+    },
+    {
+        "id": "278dbdeb928e3a77",
+        "type": "debug",
+        "z": "434aa09526dd2e21",
+        "name": "debug 13",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 780,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "06bdbc2acfe5ec0b",
+        "type": "function",
+        "z": "434aa09526dd2e21",
+        "name": "Resolve device",
+        "func": "const deviceId = msg.writeRequest.device;\n\nconst devices = global.get(\"devices\");\n\nif (!devices) {\n    node.error(\"No existe devices en memoria.\");\n    return null;\n}\n\nconst device = devices[deviceId];\n\nif (!device) {\n    node.error(`No existe el dispositivo ${deviceId}.`);\n    return null;\n}\n\n// Copia para no modificar la configuración original\nmsg.device = JSON.parse(JSON.stringify(device));\n\nmsg.device.id = deviceId;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 240,
+        "wires": [
+            [
+                "e0373db217eaf319",
+                "51c39c52e579e774"
+            ]
+        ]
+    },
+    {
+        "id": "e0373db217eaf319",
+        "type": "function",
+        "z": "434aa09526dd2e21",
+        "name": "Resolve gateway",
+        "func": "const gateways = global.get(\"gateways\");\n\nif (!gateways) {\n    node.error(\"No existen gateways en memoria.\");\n    return null;\n}\n\nconst gatewayId = msg.writeRequest.gateway;\n\nconst gateway = gateways[gatewayId];\n\nif (!gateway) {\n    node.error(`No existe el gateway ${gatewayId}.`);\n    return null;\n}\n\nmsg.gateway = JSON.parse(JSON.stringify(gateway));\n\nmsg.gateway.id = gatewayId;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 570,
+        "y": 240,
+        "wires": [
+            [
+                "a1bcf86e4467761d",
+                "234a7adf2a76da48"
+            ]
+        ]
+    },
+    {
+        "id": "a1bcf86e4467761d",
+        "type": "function",
+        "z": "434aa09526dd2e21",
+        "name": "Resolve Drivers",
+        "func": "const drivers = global.get(\"drivers\");\n\nif (!drivers) {\n    node.error(\"No existen drivers en memoria.\");\n    return null;\n}\n\nconst driverName = msg.device.driver;\n\nconst driver = drivers[driverName];\n\nif (!driver) {\n    node.error(`No existe el driver ${driverName}.`);\n    return null;\n}\n\nmsg.device.driver = JSON.parse(JSON.stringify(driver));\n\nmsg.device.driver.id = driverName;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 780,
+        "y": 240,
+        "wires": [
+            [
+                "112156163ebc530b",
+                "ba9873d87f6f2b3a"
+            ]
+        ]
+    },
+    {
+        "id": "112156163ebc530b",
+        "type": "function",
+        "z": "434aa09526dd2e21",
+        "name": "Resolve Variable",
+        "func": "const variableName = msg.writeRequest.variable;\n\nif (!msg.device || !msg.device.driver) {\n    node.error(\"No existe driver en msg.device.\");\n    return null;\n}\n\nconst variables = msg.device.driver.variables;\n\nif (!variables) {\n    node.error(\n        `El driver ${msg.device.driver.id} no tiene variables.`\n    );\n    return null;\n}\n\nconst variable = variables[variableName];\n\nif (!variable) {\n    node.error(\n        `La variable ${variableName} no existe en el driver ${msg.device.driver.id}.`\n    );\n    return null;\n}\n\nmsg.variable = variable;\nmsg.point = variableName;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 360,
+        "wires": [
+            [
+                "eda6701a39434137",
+                "61577b621d6e7d5d"
+            ]
+        ]
+    },
+    {
+        "id": "eda6701a39434137",
+        "type": "function",
+        "z": "434aa09526dd2e21",
+        "name": "Validate Write",
+        "func": "const variable = msg.variable;\n\nif (variable.write !== true) {\n    node.error(\n        `La variable ${msg.point} no está habilitada para escritura.`\n    );\n    return null;\n}\n\nif (variable.type === undefined) {\n    node.error(\n        `La variable ${msg.point} no tiene type definido.`\n    );\n    return null;\n}\n\nif (variable.address === undefined) {\n    node.error(\n        `La variable ${msg.point} no tiene address definido.`\n    );\n    return null;\n}\n\nif (variable.fc === undefined) {\n    node.error(\n        `La variable ${msg.point} no tiene fc definido.`\n    );\n    return null;\n}\n\nif (msg.writeRequest.value === undefined) {\n    node.error(\n        `No se recibió value para ${msg.point}.`\n    );\n    return null;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 360,
+        "wires": [
+            [
+                "fb57deef510de95a",
+                "23d1b081350e98a9"
+            ]
+        ]
+    },
+    {
+        "id": "fb57deef510de95a",
+        "type": "function",
+        "z": "434aa09526dd2e21",
+        "name": "Build Modbus Write",
+        "func": "const variable = msg.variable;\n\nlet value = msg.writeRequest.value;\n\n//==================================================\n// BOOL\n//==================================================\n\nif (variable.type === \"bool\") {\n\n    if (typeof value === \"string\") {\n\n        if (value.toLowerCase() === \"true\") {\n            value = true;\n        }\n        else if (value.toLowerCase() === \"false\") {\n            value = false;\n        }\n        else {\n            node.error(\n                `Valor BOOL inválido: ${value}`\n            );\n            return null;\n        }\n\n    }\n    else {\n        value = Boolean(value);\n    }\n\n}\n\n//==================================================\n// UINT16 / INT16\n//==================================================\n\nelse if (\n    variable.type === \"uint16\" ||\n    variable.type === \"int16\"\n) {\n\n    value = Number(value);\n\n    if (!Number.isFinite(value)) {\n        node.error(\n            `Valor numérico inválido para ${msg.point}.`\n        );\n        return null;\n    }\n\n}\n\n//==================================================\n// UINT32 / INT32 / FLOAT\n//==================================================\n\nelse if (\n    variable.type === \"uint32\" ||\n    variable.type === \"int32\" ||\n    variable.type === \"float\"\n) {\n\n    value = Number(value);\n\n    if (!Number.isFinite(value)) {\n        node.error(\n            `Valor numérico inválido para ${msg.point}.`\n        );\n        return null;\n    }\n\n}\n\n//==================================================\n// Tipo no soportado\n//==================================================\n\nelse {\n\n    node.error(\n        `Tipo de escritura no implementado: ${variable.type}`\n    );\n\n    return null;\n}\n\n//==================================================\n// Construcción de petición Modbus\n//==================================================\n\nmsg.payload = {\n\n    fc: Number(variable.fc),\n\n    address: Number(variable.address),\n\n    quantity: Number(variable.quantity),\n\n    unitid: Number(msg.device.slave),\n\n    value: value\n\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 770,
+        "y": 360,
+        "wires": [
+            [
+                "751f90d0e00f4805",
+                "f15f519fc0dc2f25"
+            ]
+        ]
+    },
+    {
+        "id": "751f90d0e00f4805",
+        "type": "switch",
+        "z": "434aa09526dd2e21",
+        "name": "",
+        "property": "gateway.id",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "HAIWELL",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "SCU200",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "SCHNEIDER",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 3,
+        "x": 330,
+        "y": 520,
+        "wires": [
+            [
+                "1a5144b43dbf03b4",
+                "63f9cce5155a2dc3"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "51c39c52e579e774",
+        "type": "debug",
+        "z": "434aa09526dd2e21",
+        "name": "debug 22",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 340,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "234a7adf2a76da48",
+        "type": "debug",
+        "z": "434aa09526dd2e21",
+        "name": "debug 26",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 560,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "ba9873d87f6f2b3a",
+        "type": "debug",
+        "z": "434aa09526dd2e21",
+        "name": "debug 27",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 780,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "61577b621d6e7d5d",
+        "type": "debug",
+        "z": "434aa09526dd2e21",
+        "name": "debug 28",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 340,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "23d1b081350e98a9",
+        "type": "debug",
+        "z": "434aa09526dd2e21",
+        "name": "debug 29",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 560,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "f15f519fc0dc2f25",
+        "type": "debug",
+        "z": "434aa09526dd2e21",
+        "name": "debug 30",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 760,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "1a5144b43dbf03b4",
+        "type": "debug",
+        "z": "434aa09526dd2e21",
+        "name": "debug 31",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 280,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "63f9cce5155a2dc3",
         "type": "modbus-flex-write",
-        "z": "4ffdac17e98d3ae7",
-        "name": "SCU write",
+        "z": "434aa09526dd2e21",
+        "name": "Haiwell",
         "showStatusActivities": false,
         "showErrors": false,
         "showWarnings": true,
@@ -1549,8 +1867,389 @@
         "keepMsgProperties": true,
         "delayOnStart": false,
         "startDelayTime": "",
+        "x": 560,
+        "y": 480,
+        "wires": [
+            [],
+            []
+        ]
+    },
+    {
+        "id": "ea9ea0d016079e1c",
+        "type": "link in",
+        "z": "ee9e20c7532940ba",
+        "name": "link in 4",
+        "links": [
+            "61a49460c5c82be4"
+        ],
+        "x": 125,
+        "y": 80,
+        "wires": [
+            [
+                "558c7032d28b412f"
+            ]
+        ]
+    },
+    {
+        "id": "558c7032d28b412f",
+        "type": "function",
+        "z": "ee9e20c7532940ba",
+        "name": "Alarm Filter",
+        "func": "// ============================================\n// ALARM FILTER\n// ============================================\n//\n// Solo deja pasar variables configuradas\n// explícitamente como alarmas en el driver.\n// ============================================\n\nif (!msg.variable) {\n    return null;\n}\n\n// Esta variable no es una alarma\nif (msg.variable.alarm !== true) {\n    return null;\n}\n\n// Obtener valor decodificado\nif (\n    !msg.payload ||\n    typeof msg.payload.value !== \"number\"\n) {\n    node.error(\n        \"Alarm Filter: valor inválido para \" +\n        msg.point\n    );\n\n    return null;\n}\n\nconst value = msg.payload.value;\n\n// Por ahora nuestro Alarm Engine trabaja\n// exclusivamente con alarmas binarias.\nif (value !== 0 && value !== 1) {\n\n    node.error(\n        \"Alarm Filter: \" +\n        msg.point +\n        \" debe ser 0 o 1. Valor recibido: \" +\n        value\n    );\n\n    return null;\n}\n\nmsg.alarmValue = value;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 310,
+        "y": 80,
+        "wires": [
+            [
+                "b0089cb02f2750c7"
+            ]
+        ]
+    },
+    {
+        "id": "b0089cb02f2750c7",
+        "type": "function",
+        "z": "ee9e20c7532940ba",
+        "name": "Binary Alarm Engine",
+        "func": "// ============================================\n// BINARY ALARM ENGINE\n// ============================================\n//\n// 0 = NORMAL\n// 1 = ALARMA\n//\n// Detecta cambios de estado y genera\n// eventos para Notification Engine.\n//\n// Política de arranque:\n//\n// Primera lectura = 0\n//      Guardar NORMAL.\n//\n// Primera lectura = 1\n//      Generar ALARMA inmediatamente.\n//\n// ============================================\n\n\n// --------------------------------------------\n// Validaciones\n// --------------------------------------------\n\nif (!msg.device || !msg.device.id) {\n    node.error(\"Alarm Engine: falta device.id\");\n    return null;\n}\n\nif (!msg.point) {\n    node.error(\"Alarm Engine: falta msg.point\");\n    return null;\n}\n\nif (!msg.variable) {\n    node.error(\"Alarm Engine: falta msg.variable\");\n    return null;\n}\n\nconst value = msg.alarmValue;\n\nif (value !== 0 && value !== 1) {\n    node.error(\n        \"Alarm Engine: valor no binario: \" +\n        value\n    );\n\n    return null;\n}\n\n\n// --------------------------------------------\n// Identificación\n// --------------------------------------------\n\nconst deviceId = msg.device.id;\n\nconst deviceName =\n    msg.device.name || deviceId;\n\nconst pointId = msg.point;\n\nconst pointName =\n    msg.variable.name || pointId;\n\nconst alarmId =\n    deviceId + \".\" + pointId;\n\n\n// --------------------------------------------\n// Metadata desde Driver\n// --------------------------------------------\n\nconst severity =\n    msg.variable.severity || \"CRITICAL\";\n\nconst alarmMessage =\n    msg.variable.message || pointName;\n\nconst unit =\n    msg.variable.unit || \"\";\n\n\n// --------------------------------------------\n// Runtime de alarmas\n// --------------------------------------------\n\nlet states =\n    flow.get(\"alarmStates\") || {};\n\nconst previous =\n    states[alarmId];\n\nconst now = Date.now();\n\n\n// ============================================\n// PRIMERA LECTURA\n// ============================================\n\nif (previous === undefined) {\n\n    states[alarmId] = {\n        state: value,\n        since: now\n    };\n\n    flow.set(\n        \"alarmStates\",\n        states\n    );\n\n\n    // Primera lectura NORMAL\n    //\n    // Solo registramos el estado.\n    // No existe evento que notificar.\n\n    if (value === 0) {\n        return null;\n    }\n\n\n    // ----------------------------------------\n    // Primera lectura = ALARMA\n    //\n    // IMPORTANTE:\n    // Se notifica aunque el BMS recién\n    // haya arrancado.\n    // ----------------------------------------\n\n    msg.alarm = {\n\n        id: alarmId,\n\n        timestamp: now,\n\n        device: {\n            id: deviceId,\n            name: deviceName\n        },\n\n        point: {\n            id: pointId,\n            name: pointName\n        },\n\n        value: 1,\n\n        unit: unit,\n\n        severity: severity,\n\n        state: \"ACTIVE\",\n\n        message: alarmMessage\n    };\n\n    return msg;\n}\n\n\n// ============================================\n// MISMO ESTADO\n// ============================================\n\nif (previous.state === value) {\n\n    // 0 → 0\n    // o\n    // 1 → 1\n\n    // No generar otra notificación.\n\n    return null;\n}\n\n\n// ============================================\n// 0 → 1\n// NUEVA ALARMA\n// ============================================\n\nif (\n    previous.state === 0 &&\n    value === 1\n) {\n\n    states[alarmId] = {\n        state: 1,\n        since: now\n    };\n\n    flow.set(\n        \"alarmStates\",\n        states\n    );\n\n\n    msg.alarm = {\n\n        id: alarmId,\n\n        timestamp: now,\n\n        device: {\n            id: deviceId,\n            name: deviceName\n        },\n\n        point: {\n            id: pointId,\n            name: pointName\n        },\n\n        value: 1,\n\n        unit: unit,\n\n        severity: severity,\n\n        state: \"ACTIVE\",\n\n        message: alarmMessage\n    };\n\n    return msg;\n}\n\n\n// ============================================\n// 1 → 0\n// RESTABLECIMIENTO\n// ============================================\n\nif (\n    previous.state === 1 &&\n    value === 0\n) {\n\n    const activeSince =\n        previous.since;\n\n    const duration =\n        now - activeSince;\n\n\n    states[alarmId] = {\n        state: 0,\n        since: now\n    };\n\n    flow.set(\n        \"alarmStates\",\n        states\n    );\n\n\n    msg.alarm = {\n\n        id: alarmId,\n\n        timestamp: now,\n\n        device: {\n            id: deviceId,\n            name: deviceName\n        },\n\n        point: {\n            id: pointId,\n            name: pointName\n        },\n\n        value: 0,\n\n        unit: unit,\n\n        // Mantenemos la severidad original\n        // para que Notification Engine pueda\n        // seguir enviando el restablecimiento.\n        severity: severity,\n\n        state: \"CLEARED\",\n\n        message: alarmMessage,\n\n        durationMs: duration\n    };\n\n    return msg;\n}\n\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 80,
+        "wires": [
+            [
+                "1a1c89722ae7a15e",
+                "de99333f21a0ceef"
+            ]
+        ]
+    },
+    {
+        "id": "1a1c89722ae7a15e",
+        "type": "link out",
+        "z": "ee9e20c7532940ba",
+        "name": "link out 5",
+        "mode": "link",
+        "links": [
+            "ae0b2cafe16586dc"
+        ],
+        "x": 715,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "2dad12e3a1c46442",
+        "type": "inject",
+        "z": "ee9e20c7532940ba",
+        "name": "sim alarm 0",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "0",
+        "payloadType": "num",
+        "x": 230,
+        "y": 220,
+        "wires": [
+            [
+                "a83982e27f670e26"
+            ]
+        ]
+    },
+    {
+        "id": "37d43925060ea3e8",
+        "type": "inject",
+        "z": "ee9e20c7532940ba",
+        "name": "sim alarm 1",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "1",
+        "payloadType": "num",
+        "x": 230,
+        "y": 300,
+        "wires": [
+            [
+                "a83982e27f670e26"
+            ]
+        ]
+    },
+    {
+        "id": "a83982e27f670e26",
+        "type": "function",
+        "z": "ee9e20c7532940ba",
+        "name": "build test alarm",
+        "func": "// ============================================\n// BUILD TEST ALARM\n// ============================================\n//\n// Simula exactamente la información necesaria\n// para que Alarm Filter y Binary Alarm Engine\n// procesen una alarma.\n//\n// msg.payload llega desde los Inject:\n//\n// 0 = NORMAL\n// 1 = ALARMA\n//\n// Usamos un device ID de simulación para NO\n// interferir con el estado de la alarma real.\n// ============================================\n\n\n// --------------------------------------------\n// OBTENER VALOR DEL INJECT\n// --------------------------------------------\n\nconst value = Number(msg.payload);\n\n\n// --------------------------------------------\n// VALIDAR\n// --------------------------------------------\n\nif (value !== 0 && value !== 1) {\n\n    node.error(\n        \"Build Test Alarm: el valor debe ser 0 o 1\"\n    );\n\n    return null;\n}\n\n\n// --------------------------------------------\n// SIMULAR DISPOSITIVO\n// --------------------------------------------\n\nmsg.device = {\n\n    id: \"SIM_COMPRESSORS\",\n\n    name: \"Sala de Compresores\"\n};\n\n\n// --------------------------------------------\n// SIMULAR PUNTO\n// --------------------------------------------\n\nmsg.point = \"AlarmCompressors\";\n\n\n// --------------------------------------------\n// SIMULAR DEFINICIÓN DEL DRIVER\n// --------------------------------------------\n\nmsg.variable = {\n\n    name: \"Alarma Compresores\",\n\n    address: 3472,\n\n    quantity: 1,\n\n    type: \"uint16\",\n\n    multiplier: 1,\n\n    unit: \"\",\n\n    decimals: 0,\n\n    alarm: true,\n\n    severity: \"CRITICAL\",\n\n    message:\n        \"Se detectó una alarma en la sala de compresores\"\n};\n\n\n// --------------------------------------------\n// SIMULAR SALIDA DE DECODE VALUE\n// --------------------------------------------\n\nmsg.payload = {\n\n    point: msg.point,\n\n    value: value\n};\n\n\n// --------------------------------------------\n// SALIDA\n// --------------------------------------------\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 240,
+        "wires": [
+            [
+                "558c7032d28b412f"
+            ]
+        ]
+    },
+    {
+        "id": "de99333f21a0ceef",
+        "type": "debug",
+        "z": "ee9e20c7532940ba",
+        "name": "debug 36",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "alarm",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 720,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "09164e8ae6798653",
+        "type": "debug",
+        "z": "087926ec68603352",
+        "name": "debug 32",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 920,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "790c4c7fb2272298",
+        "type": "whatsapp-api-send",
+        "z": "087926ec68603352",
+        "account": "b2f4d7c2e9b00102",
+        "name": "Send Whatsapp",
+        "peer": "59894055347@s.whatsapp.net",
+        "x": 740,
+        "y": 460,
+        "wires": [
+            [
+                "09164e8ae6798653"
+            ]
+        ]
+    },
+    {
+        "id": "7f0516fb8d06e9c2",
+        "type": "function",
+        "z": "087926ec68603352",
+        "name": "Alarm Formatter",
+        "func": "// ============================================\n// ALARM FORMATTER\n// ============================================\n//\n// Recibe:\n// msg.alarm\n//\n// desde el Alarm Engine.\n//\n// Estados soportados:\n// ACTIVE  = alarma activa\n// CLEARED = alarma restablecida\n// ============================================\n\n\nconst alarm = msg.alarm;\n\n\n// --------------------------------------------\n// VALIDACIÓN\n// --------------------------------------------\n\nif (!alarm) {\n    node.error(\"Alarm Formatter: no existe msg.alarm\");\n    return null;\n}\n\nif (!alarm.device) {\n    node.error(\"Alarm Formatter: falta alarm.device\");\n    return null;\n}\n\nif (!alarm.point) {\n    node.error(\"Alarm Formatter: falta alarm.point\");\n    return null;\n}\n\nif (!alarm.state) {\n    node.error(\"Alarm Formatter: falta alarm.state\");\n    return null;\n}\n\n\n// --------------------------------------------\n// FECHA\n// --------------------------------------------\n\nconst date = new Date(alarm.timestamp);\n\nconst dateString = date.toLocaleString(\n    \"es-UY\",\n    {\n        timeZone: \"America/Montevideo\"\n    }\n);\n\n\n// --------------------------------------------\n// SEVERIDAD PARA VISUALIZACIÓN\n// --------------------------------------------\n\nlet severityText = alarm.severity;\n\nswitch (alarm.severity) {\n\n    case \"CRITICAL\":\n        severityText = \"CRÍTICA\";\n        break;\n\n    case \"WARNING\":\n        severityText = \"ADVERTENCIA\";\n        break;\n\n    case \"INFO\":\n        severityText = \"INFORMACIÓN\";\n        break;\n}\n\n\n// --------------------------------------------\n// TÍTULO E ICONO\n// --------------------------------------------\n\nlet icon = \"⚠️\";\nlet title = \"EVENTO BMS\";\nlet stateText = alarm.state;\n\n\n// ============================================\n// ALARMA ACTIVA\n// ============================================\n\nif (alarm.state === \"ACTIVE\") {\n\n    stateText = \"ACTIVA\";\n\n    switch (alarm.severity) {\n\n        case \"CRITICAL\":\n            icon = \"🚨\";\n            break;\n\n        case \"WARNING\":\n            icon = \"⚠️\";\n            break;\n\n        case \"INFO\":\n            icon = \"ℹ️\";\n            break;\n\n        default:\n            icon = \"⚠️\";\n    }\n\n    title = \"ALARMA BMS\";\n}\n\n\n// ============================================\n// ALARMA RESTABLECIDA\n// ============================================\n\nelse if (alarm.state === \"CLEARED\") {\n\n    icon = \"✅\";\n    title = \"ALARMA RESTABLECIDA\";\n    stateText = \"NORMAL\";\n}\n\n\n// ============================================\n// ESTADO DESCONOCIDO\n// ============================================\n\nelse {\n\n    node.error(\n        \"Alarm Formatter: estado desconocido: \" +\n        alarm.state\n    );\n\n    return null;\n}\n\n\n// --------------------------------------------\n// DURACIÓN\n// --------------------------------------------\n\nlet durationText = \"\";\n\nif (\n    alarm.state === \"CLEARED\" &&\n    typeof alarm.durationMs === \"number\"\n) {\n\n    const totalSeconds =\n        Math.floor(alarm.durationMs / 1000);\n\n    const hours =\n        Math.floor(totalSeconds / 3600);\n\n    const minutes =\n        Math.floor((totalSeconds % 3600) / 60);\n\n    const seconds =\n        totalSeconds % 60;\n\n\n    if (hours > 0) {\n\n        durationText =\n            `${hours} h ${minutes} min ${seconds} s`;\n\n    } else if (minutes > 0) {\n\n        durationText =\n            `${minutes} min ${seconds} s`;\n\n    } else {\n\n        durationText =\n            `${seconds} s`;\n    }\n}\n\n\n// --------------------------------------------\n// VALOR\n// --------------------------------------------\n\nlet valueText = `${alarm.value}`;\n\nif (alarm.unit) {\n    valueText += ` ${alarm.unit}`;\n}\n\n\n// --------------------------------------------\n// CONSTRUCCIÓN DEL MENSAJE\n// --------------------------------------------\n\nlet message =\n`${icon} *${title}*\n\n*Equipo:* ${alarm.device.name}\n*Alarma:* ${alarm.point.name}\n*Estado:* ${stateText}\n*Severidad:* ${severityText}\n\n${alarm.message}\n\n*Fecha:* ${dateString}`;\n\n\n// --------------------------------------------\n// AGREGAR DURACIÓN SI EXISTE\n// --------------------------------------------\n\nif (durationText) {\n\n    message +=\n`\\n*Duración:* ${durationText}`;\n}\n\n\n// --------------------------------------------\n// SALIDA\n// --------------------------------------------\n\nmsg.whatsappMessage = message;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
         "x": 320,
-        "y": 280,
+        "y": 380,
+        "wires": [
+            [
+                "6857f8351a2ba8bd",
+                "71d2f9ee07d8393f"
+            ]
+        ]
+    },
+    {
+        "id": "6857f8351a2ba8bd",
+        "type": "function",
+        "z": "087926ec68603352",
+        "name": "Severity / routing",
+        "func": "// ============================================\n// SEVERITY / ROUTING\n// ============================================\n//\n// Decide por qué canales debe enviarse\n// cada evento.\n//\n// Tanto ACTIVE como CLEARED utilizan\n// la severidad configurada para la alarma.\n// ============================================\n\n\nconst alarm = msg.alarm;\n\n\n// --------------------------------------------\n// VALIDACIÓN\n// --------------------------------------------\n\nif (!alarm) {\n    node.error(\"Severity / Routing: no existe msg.alarm\");\n    return null;\n}\n\nif (!alarm.severity) {\n    node.error(\"Severity / Routing: falta severity\");\n    return null;\n}\n\nif (\n    alarm.state !== \"ACTIVE\" &&\n    alarm.state !== \"CLEARED\"\n) {\n\n    node.error(\n        \"Severity / Routing: estado inválido: \" +\n        alarm.state\n    );\n\n    return null;\n}\n\n\n// --------------------------------------------\n// INICIALIZAR ROUTING\n// --------------------------------------------\n\nmsg.routing = {\n    whatsapp: false,\n    email: false,\n    telegram: false\n};\n\n\n// --------------------------------------------\n// ROUTING SEGÚN SEVERIDAD\n// --------------------------------------------\n\nswitch (alarm.severity) {\n\n    // ========================================\n    // CRITICAL\n    // ========================================\n\n    case \"CRITICAL\":\n\n        msg.routing.whatsapp = true;\n        msg.routing.email = true;\n        msg.routing.telegram = true;\n\n        break;\n\n\n    // ========================================\n    // WARNING\n    // ========================================\n\n    case \"WARNING\":\n\n        msg.routing.whatsapp = true;\n        msg.routing.email = true;\n        msg.routing.telegram = false;\n\n        break;\n\n\n    // ========================================\n    // INFO\n    // ========================================\n\n    case \"INFO\":\n\n        // Solo queda registrado en el log.\n\n        msg.routing.whatsapp = false;\n        msg.routing.email = false;\n        msg.routing.telegram = false;\n\n        break;\n\n\n    // ========================================\n    // DESCONOCIDO\n    // ========================================\n\n    default:\n\n        node.error(\n            \"Severity / Routing: severidad desconocida: \" +\n            alarm.severity\n        );\n\n        return null;\n}\n\n\n// --------------------------------------------\n// SALIDA\n// --------------------------------------------\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 570,
+        "y": 380,
+        "wires": [
+            [
+                "d3b56f1803a6558d",
+                "f5a0667476b40e71",
+                "7656109f7d38530a"
+            ]
+        ]
+    },
+    {
+        "id": "d3b56f1803a6558d",
+        "type": "switch",
+        "z": "087926ec68603352",
+        "name": "",
+        "property": "routing.whatsapp",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "true"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 1,
+        "x": 270,
+        "y": 460,
+        "wires": [
+            [
+                "d5f5df86484aebc6"
+            ]
+        ]
+    },
+    {
+        "id": "d5f5df86484aebc6",
+        "type": "function",
+        "z": "087926ec68603352",
+        "name": "Prepare Whatsapp message",
+        "func": "// ============================================\n// PREPARE WHATSAPP\n// ============================================\n\nif (!msg.whatsappMessage) {\n    node.error(\"No existe msg.whatsappMessage\");\n    return null;\n}\n\nmsg.payload = msg.whatsappMessage;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 460,
+        "wires": [
+            [
+                "790c4c7fb2272298"
+            ]
+        ]
+    },
+    {
+        "id": "f5a0667476b40e71",
+        "type": "function",
+        "z": "087926ec68603352",
+        "name": "Alarm Log",
+        "func": "// ============================================\n// ALARM LOG\n// ============================================\n//\n// Registro temporal de eventos de alarma.\n//\n// Más adelante esta salida irá a la\n// base de datos histórica.\n// ============================================\n\n\nconst alarm = msg.alarm;\n\n\n// --------------------------------------------\n// VALIDACIÓN\n// --------------------------------------------\n\nif (!alarm) {\n    node.error(\"Alarm Log: no existe msg.alarm\");\n    return null;\n}\n\n\n// --------------------------------------------\n// CREAR REGISTRO\n// --------------------------------------------\n\nconst logEntry = {\n\n    timestamp: alarm.timestamp,\n\n    id: alarm.id,\n\n    device: alarm.device,\n\n    point: alarm.point,\n\n    value: alarm.value,\n\n    unit: alarm.unit,\n\n    severity: alarm.severity,\n\n    state: alarm.state,\n\n    message: alarm.message,\n\n    durationMs:\n        alarm.durationMs !== undefined\n            ? alarm.durationMs\n            : null\n};\n\n\n// --------------------------------------------\n// OBTENER LOG ACTUAL\n// --------------------------------------------\n\nlet alarmLog =\n    flow.get(\"alarmLog\") || [];\n\n\n// --------------------------------------------\n// AGREGAR EVENTO\n// --------------------------------------------\n\nalarmLog.push(logEntry);\n\n\n// --------------------------------------------\n// LIMITAR MEMORIA\n// --------------------------------------------\n//\n// Por ahora mantenemos los últimos\n// 1000 eventos.\n//\n// Cuando usemos InfluxDB esto dejará de ser\n// nuestro almacenamiento definitivo.\n// --------------------------------------------\n\nif (alarmLog.length > 1000) {\n\n    alarmLog.shift();\n}\n\n\n// --------------------------------------------\n// GUARDAR\n// --------------------------------------------\n\nflow.set(\n    \"alarmLog\",\n    alarmLog\n);\n\n\n// --------------------------------------------\n// SALIDA\n// --------------------------------------------\n\nmsg.payload = logEntry;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 830,
+        "y": 380,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "8fbb2656deee15fd",
+        "type": "debug",
+        "z": "087926ec68603352",
+        "name": "debug 33",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "alarm",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 220,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "71d2f9ee07d8393f",
+        "type": "debug",
+        "z": "087926ec68603352",
+        "name": "debug 34",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "whatsappMessage",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 420,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "7656109f7d38530a",
+        "type": "debug",
+        "z": "087926ec68603352",
+        "name": "debug 35",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "routing",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 660,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "ae0b2cafe16586dc",
+        "type": "link in",
+        "z": "087926ec68603352",
+        "name": "Alarm Event In",
+        "links": [
+            "1a1c89722ae7a15e"
+        ],
+        "x": 145,
+        "y": 380,
+        "wires": [
+            [
+                "7f0516fb8d06e9c2",
+                "8fbb2656deee15fd"
+            ]
+        ]
+    },
+    {
+        "id": "de2b2fdd58e85e82",
+        "type": "modbus-flex-write",
+        "z": "4ffdac17e98d3ae7",
+        "name": "Haiwell",
+        "showStatusActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "server": "9d8cbf53c2eb4650",
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": true,
+        "delayOnStart": false,
+        "startDelayTime": "",
+        "x": 420,
+        "y": 240,
         "wires": [
             [
                 "84675909e39065b1"
@@ -1571,7 +2270,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 660,
-        "y": 280,
+        "y": 240,
         "wires": []
     },
     {
@@ -1593,15 +2292,53 @@
         "once": false,
         "onceDelay": 0.1,
         "topic": "",
-        "payload": "{ \"fc\":3,     \"address\":662,     \"quantity\":1,     \"unitid\":1 }",
+        "payload": "{ \"fc\":5,     \"address\":3370,     \"quantity\":1,     \"unitid\":1,  \"value\":false  }",
         "payloadType": "json",
-        "x": 150,
-        "y": 200,
+        "x": 170,
+        "y": 240,
         "wires": [
             [
-                "a5ea6a8f8b013a96"
+                "de2b2fdd58e85e82"
             ]
         ]
+    },
+    {
+        "id": "8c5457eab15bfa6c",
+        "type": "mqtt in",
+        "z": "4ffdac17e98d3ae7",
+        "name": "",
+        "topic": "bms/+/+/+/write",
+        "qos": "2",
+        "datatype": "auto-detect",
+        "broker": "3bb6fb820dd3038d",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 180,
+        "y": 360,
+        "wires": [
+            [
+                "ff02aab92b114c90"
+            ]
+        ]
+    },
+    {
+        "id": "ff02aab92b114c90",
+        "type": "debug",
+        "z": "4ffdac17e98d3ae7",
+        "name": "debug 25",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 460,
+        "y": 360,
+        "wires": []
     },
     {
         "id": "61d32fba33ee7de8",
@@ -1705,6 +2442,200 @@
         "y": 495.1999816894531,
         "wires": [
             []
+        ]
+    },
+    {
+        "id": "d04af16379baaa94",
+        "type": "function",
+        "z": "6c26a882f341bc4c",
+        "name": "Decode Value",
+        "func": "const regs = msg.payload;\n\nif (!Array.isArray(regs)) {\n    return null;\n}\n\nconst variable = msg.variable;\n\nlet value = null;\n\n//==================================================\n// UINT16\n//==================================================\nif (variable.type === \"uint16\") {\n\n    value = regs[0];\n\n}\n\n//==================================================\n// INT16\n//==================================================\nelse if (variable.type === \"int16\") {\n\n    const buffer = Buffer.alloc(2);\n    buffer.writeUInt16BE(regs[0],0);\n    value = buffer.readInt16BE(0);\n\n}\n\n//==================================================\n// UINT32\n//==================================================\nelse if (variable.type === \"uint32\") {\n\n    // Si llegaron 4 registros, usamos solamente los dos primeros.\n    // Esto ocurre en algunos equipos (como el SCU200) que reservan\n    // espacio para una futura expansión a 64 bits.\n\n    const r0 = regs[0];\n    const r1 = regs[1];\n\n    if (variable.swap === true) {\n\n        value = ((r0 << 16) >>> 0) + r1;\n\n    } else {\n\n        value = ((r1 << 16) >>> 0) + r0;\n\n    }\n\n}\n\n//==================================================\n// INT32\n//==================================================\nelse if (variable.type === \"int32\") {\n\n    const buffer = Buffer.alloc(4);\n\n    if (variable.swap === true) {\n\n        buffer.writeUInt16BE(regs[1],0);\n        buffer.writeUInt16BE(regs[0],2);\n\n    } else {\n\n        buffer.writeUInt16BE(regs[0],0);\n        buffer.writeUInt16BE(regs[1],2);\n\n    }\n\n    value = buffer.readInt32BE(0);\n\n}\n\n//==================================================\n// FLOAT\n//==================================================\nelse if (variable.type === \"float\") {\n\n    const buffer = Buffer.alloc(4);\n\n    if (variable.swap === true) {\n\n        buffer.writeUInt16BE(regs[1],0);\n        buffer.writeUInt16BE(regs[0],2);\n\n    } else {\n\n        buffer.writeUInt16BE(regs[0],0);\n        buffer.writeUInt16BE(regs[1],2);\n\n    }\n\n    value = buffer.readFloatBE(0);\n\n}\n\n//==================================================\n\nelse {\n\n    node.error(\"Tipo desconocido: \" + variable.type);\n    return null;\n\n}\n\n// Aplicar multiplicador (viejo)\n\nif (variable.multiplier !== undefined) {\n\n    value *= variable.multiplier;\n\n}\n\n// Redondeo\n\nif (variable.decimals !== undefined) {\n\n    value = Number(value.toFixed(variable.decimals));\n\n}\n\nmsg.payload = {\n    value: value\n};\n\nreturn msg;\n\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 300,
+        "y": 340,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "cb9cc3c9aaafed34",
+        "type": "function",
+        "z": "6c26a882f341bc4c",
+        "name": "Buid Job",
+        "func": "const device = msg.device;\n\nif (!device) {\n    node.error(\"No llegó ningún dispositivo.\");\n    return null;\n}\n\nif (!device.driver) {\n    node.error(\"El dispositivo no tiene driver.\");\n    return null;\n}\n\n//if (!Array.isArray(device.points)) {\n//    node.error(\"El dispositivo no tiene lista de puntos.\");\n//    return null;\n//}\n\nconst jobs = [];\n\nfor (const pointName of Object.keys(device.driver.variables)) {// con objects keys, dejamos de depender del puntero en devices.json\n\n    const variable = device.driver.variables[pointName];\n\n    if (!variable) {\n\n        node.warn(`La variable ${pointName} no existe en el driver ${device.driver.id}`);\n\n        continue;\n    }\n\n    jobs.push({\n\n        device: device,\n\n        point: pointName,\n\n        variable: variable,\n\n        request: {\n\n            unitid: device.slave,\n\n            fc: variable.fc,\n\n            address: variable.address,\n\n            quantity: variable.quantity\n\n        }\n\n    });\n\n}\n\nmsg.payload = jobs;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 120,
+        "y": 260,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "ae24dbfdd08501e6",
+        "type": "function",
+        "z": "6c26a882f341bc4c",
+        "name": "Buid Measurement",
+        "func": "const deviceId = msg.device.id;\n\nif (!deviceId) {\n    node.error(\"No existe device.id\");\n    return null;\n}\n\nlet cache = flow.get(\"measurements\") || {};\n\n// Crear almacenamiento del dispositivo\nif (!cache[deviceId]) {\n    cache[deviceId] = {};\n}\n\n// Guardar la variable recibida\ncache[deviceId][msg.point] = {\n\n    name: msg.variable.name,\n\n    value: msg.payload.value,\n\n    unit: msg.variable.unit,\n\n    timestamp: new Date().toISOString()\n\n};\n\n// Guardar nuevamente el cache\nflow.set(\"measurements\", cache);\n\n// ¿Cuántos puntos esperamos para este dispositivo? va a contar automaticamente segun las variables que tenga el driver\nconst expectedPoints = Object.keys(msg.device.driver.variables).length;\n\n// Si todavía faltan variables, esperamos\nif (Object.keys(cache[deviceId]).length < expectedPoints) {\n    return null;\n}\n\n//======================================================\n// Todas las variables fueron adquiridas\n//======================================================\n\nmsg.payload = {\n\n    deviceId: deviceId,\n\n    deviceName: msg.device.name,\n\n    gateway: msg.device.gateway.id,\n\n    driver: msg.device.driver.id,\n\n    timestamp: new Date().toISOString(),\n\n    measurements: cache[deviceId]\n\n};\n\n// Limpiar memoria para el próximo ciclo\ndelete cache[deviceId];\n\nflow.set(\"measurements\", cache);\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 290,
+        "y": 260,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "0d6bdec1d693a89f",
+        "type": "function",
+        "z": "6c26a882f341bc4c",
+        "name": "Decode Value (new switch) (antes de bitmask)",
+        "func": "const regs = msg.payload;\n\nif (!Array.isArray(regs)) {\n    return null;\n}\n\nconst variable = msg.variable;\n\nlet value;\n\n//==================================================\n// Decodificación según tipo\n//==================================================\n\nswitch (variable.type) {\n\n    //--------------------------------------------------\n    // BOOL\n    //--------------------------------------------------\n    case \"bool\":\n        //value = !!regs[0];\n        value = regs[0] ? 1 : 0;//acondicionamos el dato a realbool\n        break;\n\n    //--------------------------------------------------\n    // UINT16\n    //--------------------------------------------------\n    case \"uint16\":\n        value = regs[0];\n        break;\n\n    //--------------------------------------------------\n    // INT16\n    //--------------------------------------------------\n    case \"int16\": {\n\n        const buffer = Buffer.alloc(2);\n        buffer.writeUInt16BE(regs[0], 0);\n        value = buffer.readInt16BE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // UINT32\n    //--------------------------------------------------\n    case \"uint32\": {\n\n        const r0 = regs[0];\n        const r1 = regs[1];\n\n        if (variable.swap) {\n            value = ((r0 << 16) >>> 0) + r1;\n        } else {\n            value = ((r1 << 16) >>> 0) + r0;\n        }\n\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // INT32\n    //--------------------------------------------------\n    case \"int32\": {\n\n        const buffer = Buffer.alloc(4);\n\n        if (variable.swap) {\n            buffer.writeUInt16BE(regs[1], 0);\n            buffer.writeUInt16BE(regs[0], 2);\n        } else {\n            buffer.writeUInt16BE(regs[0], 0);\n            buffer.writeUInt16BE(regs[1], 2);\n        }\n\n        value = buffer.readInt32BE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // FLOAT\n    //--------------------------------------------------\n    case \"float\": {\n\n        const buffer = Buffer.alloc(4);\n\n        if (variable.swap) {\n            buffer.writeUInt16BE(regs[1], 0);\n            buffer.writeUInt16BE(regs[0], 2);\n        } else {\n            buffer.writeUInt16BE(regs[0], 0);\n            buffer.writeUInt16BE(regs[1], 2);\n        }\n\n        value = buffer.readFloatBE(0);\n        break;\n\n    }\n\n    //--------------------------------------------------\n    // DOUBLE (reservado)\n    //--------------------------------------------------\n    case \"double\":\n        node.error(\"Tipo DOUBLE aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // UINT64 (reservado)\n    //--------------------------------------------------\n    case \"uint64\":\n        node.error(\"Tipo UINT64 aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // INT64 (reservado)\n    //--------------------------------------------------\n    case \"int64\":\n        node.error(\"Tipo INT64 aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // STRING (reservado)\n    //--------------------------------------------------\n    case \"string\":\n        node.error(\"Tipo STRING aún no implementado.\");\n        return null;\n\n    //--------------------------------------------------\n    // Desconocido\n    //--------------------------------------------------\n    default:\n        node.error(`Tipo desconocido: ${variable.type}`);\n        return null;\n}\n\n//==================================================\n// Post-procesado (solo números)\n//==================================================\n\nif (typeof value === \"number\") {\n\n    if (variable.multiplier !== undefined) {\n        value *= variable.multiplier;\n    }\n\n    if (variable.decimals !== undefined) {\n        value = Number(value.toFixed(variable.decimals));\n    }\n\n}\n\n//==================================================\n\nmsg.payload = {\n    value: value\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 340,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "c3f4d7c2e9b00103",
+        "type": "inject",
+        "z": "a1f4d7c2e9b00101",
+        "name": "Send test message",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "PRUEBA BMS - Mensaje de alarma",
+        "payloadType": "str",
+        "x": 170,
+        "y": 100,
+        "wires": [
+            [
+                "6f565c424dbca1de"
+            ]
+        ]
+    },
+    {
+        "id": "e5f4d7c2e9b00105",
+        "type": "debug",
+        "z": "a1f4d7c2e9b00101",
+        "name": "Send result",
+        "active": true,
+        "tosidebar": true,
+        "complete": "true",
+        "targetType": "full",
+        "x": 720,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "07f4d7c2e9b00107",
+        "type": "debug",
+        "z": "a1f4d7c2e9b00101",
+        "name": "Incoming debug",
+        "active": false,
+        "tosidebar": true,
+        "complete": "true",
+        "targetType": "full",
+        "x": 470,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "18f4d7c2e9b00108",
+        "type": "inject",
+        "z": "a1f4d7c2e9b00101",
+        "name": "Read last 5",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 150,
+        "y": 300,
+        "wires": [
+            [
+                "29f4d7c2e9b00109"
+            ]
+        ]
+    },
+    {
+        "id": "29f4d7c2e9b00109",
+        "type": "whatsapp-api-history",
+        "z": "a1f4d7c2e9b00101",
+        "account": "b2f4d7c2e9b00102",
+        "name": "Recent Chat History",
+        "includeRaw": false,
+        "limit": "5",
+        "peer": "393331234567@s.whatsapp.net",
+        "unreadOnly": false,
+        "x": 450,
+        "y": 300,
+        "wires": [
+            [
+                "3af4d7c2e9b0010a"
+            ]
+        ]
+    },
+    {
+        "id": "3af4d7c2e9b0010a",
+        "type": "debug",
+        "z": "a1f4d7c2e9b00101",
+        "name": "History debug",
+        "active": true,
+        "tosidebar": true,
+        "complete": "true",
+        "targetType": "full",
+        "x": 730,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "6f565c424dbca1de",
+        "type": "whatsapp-api-send",
+        "z": "a1f4d7c2e9b00101",
+        "account": "b2f4d7c2e9b00102",
+        "name": "",
+        "peer": "59894055347@s.whatsapp.net",
+        "x": 410,
+        "y": 100,
+        "wires": [
+            [
+                "e5f4d7c2e9b00105"
+            ]
         ]
     }
 ]

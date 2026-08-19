@@ -14,7 +14,9 @@
       "swap": true,
       "unit": "V",
       "decimals": 1,
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "VoltageL2": {
@@ -26,7 +28,9 @@
       "multiplier": 0.1,
       "unit": "V",
       "decimals": 1,
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "VoltageL3": {
@@ -38,7 +42,9 @@
       "multiplier": 0.1,
       "unit": "V",
       "decimals": 1,
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "CurrentL1": {
@@ -50,7 +56,9 @@
       "multiplier":0.01,
       "unit": "A",
       "decimals": 1,
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "CurrentL2": {
@@ -62,7 +70,9 @@
       "multiplier": 0.01,
       "unit": "A",
       "decimals": 1,
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "CurrentL3": {
@@ -74,7 +84,9 @@
       "multiplier": 0.01,
       "unit": "A",
       "decimals": 1,
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "ActivePowerL1": {
@@ -86,7 +98,9 @@
       "multiplier": 0.01,
       "unit": "W",
       "decimals": 1,
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "ActivePowerL2": {
@@ -98,7 +112,9 @@
       "multiplier": 0.01,
       "unit": "W",
       "decimals": 1,
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "ActivePowerL3": {
@@ -110,7 +126,9 @@
       "multiplier": 0.01,
       "unit": "W",
       "decimals": 1,
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
    "ImportEnergy": {
@@ -122,7 +140,9 @@
       "multiplier": 0.01,
       "unit": "kWh",
       "decimals": 1,
-      "scan": 300000
+      "scan": 300000,
+      "read": true,
+      "write": false
     }
 
   }

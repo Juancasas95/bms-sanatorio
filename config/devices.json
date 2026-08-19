@@ -41,5 +41,12 @@
         "gateway": "HAIWELL",
         "driver": "HAIWELL_H32S0R",
         "slave": 1
-    }
+    },
+
+  "TANKS": {
+    "name": "Sala de Tanques",
+    "gateway": "SCHNEIDER",
+    "driver": "TM221",
+    "slave": 1
+  }
 }

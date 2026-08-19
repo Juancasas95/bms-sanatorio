@@ -11,5 +11,12 @@
 	"ip": "10.3.5.107",
 	"port": 502,
 	"timeout": 2000
+ },
+
+  "SCHNEIDER": {
+        "protocol": "modbus-tcp",
+        "ip": "10.3.5.106",
+        "port": 502,
+        "timeout": 2000
  }
 }

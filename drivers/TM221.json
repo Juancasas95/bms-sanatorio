@@ -1,0 +1,127 @@
+{
+  "manufacturer": "Schneider",
+  "model": "TM221",
+
+  "variables": {
+
+    "WaterLevelTank1": {
+      "name": "Nivel de Agua Tanque Incendio",
+      "fc": 3,
+      "address": 10,
+      "quantity": 1,
+      "type": "int16",
+      "multiplier": 1,
+      "unit": "cmH2O",
+      "decimals": 0,
+      "scan": 2000,
+      "read": true,
+      "write": false
+    },
+
+    "WaterLevelTank2": {
+      "name": "Nivel de Agua Tanque Presurización 1",
+      "fc": 3,
+      "address": 11,
+      "quantity": 1,
+      "type": "int16",
+      "multiplier": 1,
+      "unit": "cmH2O",
+      "decimals": 0,
+      "scan": 2000,
+      "read": true,
+      "write": false
+    },
+
+    "WaterLevelTank3": {
+      "name": "Nivel de Agua Tanque Presurización 2",
+      "fc": 3,
+      "address": 12,
+      "quantity": 1,
+      "type": "int16",
+      "multiplier": 1,
+      "unit": "cmH2O",
+      "decimals": 0,
+      "scan": 2000,
+      "read": true,
+      "write": false
+    },
+
+    "WaterLevelTank4": {
+      "name": "Nivel de Agua Tanque Elevación 1",
+      "fc": 3,
+      "address": 13,
+      "quantity": 1,
+      "type": "int16",
+      "multiplier": 1,
+      "unit": "cmH2O",
+      "decimals": 0,
+      "scan": 2000,
+      "read": true,
+      "write": false
+    },
+
+    "WaterLevelTank5": {
+      "name": "Nivel de Agua Tanque Elevación 2",
+      "fc": 3,
+      "address": 14,
+      "quantity": 1,
+      "type": "int16",
+      "multiplier": 1,
+      "unit": "cmH2O",
+      "decimals": 0,
+      "scan": 2000,
+      "read": true,
+      "write": false
+    },
+
+
+    "AlarmsLevelsBlock": {
+      "name": "Bloque de Alarmas Nivel",
+      "fc": 3,
+      "address": 20,
+      "quantity": 1,
+      "type": "bitmask",
+      "scan": 1000,
+      "read": true,
+      "write": false,
+      "bits": {
+        "0": {"point": "AlarmGeneral", "name": "Alarma General"},
+        "1": {"point": "AlarmLowLevelFire", "name": "Alarma Nivel Bajo Incendio"},
+	"2": {"point": "AlarmLowLevelPress1", "name": "Alarma Nivel Bajo Presurizacion 1"},
+	"3": {"point": "AlarmLowLevelPress2", "name": "Alarma Nivel Bajo Presurizacion 2"},
+        "4": {"point": "AlarmLowLevelElev1", "name": "Alarma Nivel Bajo Elevación 1"},
+        "5": {"point": "AlarmLowLevelElev2", "name": "Alarma Nivel Bajo Elevación 2"},
+        "6": {"point": "AlarmCriticLevelFire", "name": "Alarma Nivel Crítico Incendio"},
+        "7": {"point": "AlarmCriticLevelPress1", "name": "Alarma Nivel Crítico Presurizacion 1"},
+        "8": {"point": "AlarmCriticLevelPress2", "name": "Alarma Nivel Crítico Presurizacion 2"},
+        "9": {"point": "AlarmCriticLevelElev1", "name": "Alarma Nivel Crítico Elevación 1"},
+        "10": {"point": "AlarmCriticLevelElev2", "name": "Alarma Nivel Crítico Elevación 2"},
+        "11": {"point": "AlarmCriticLevelChlorine", "name": "Alarma Nivel Crítico Cloro"}
+      }
+    },
+
+    "AlarmsControlsBlock": {
+      "name": "Bloque de Alarmas Controladores",
+      "fc": 3,
+      "address": 30,
+      "quantity": 1,
+      "type": "bitmask",
+      "scan": 1000,
+      "read": true,
+      "write": false,
+      "bits": {
+        "0": {"point": "AlarmFireDashEnergized", "name": "Tablero de incendio energizado"},
+        "1": {"point": "AlarmFireDashPhase", "name": "Alarma Falta de Fase Tablero Incendio"},
+        "2": {"point": "AlarmFireBombOn", "name": "Bomba de Incendio Encendida"},
+        "3": {"point": "AlarmFireJockeyBombOn", "name": "Bomba de Incendio Jockey Encendida"},
+        "4": {"point": "AlarmControlerElev1", "name": "Alarma Controlador Elevación 1"},
+        "5": {"point": "AlarmControlerElev2", "name": "Alarma Controlador Elevación 2"},
+        "6": {"point": "AlarmControlerElev3", "name": "Alarma Controlador Elevación 3"},
+        "7": {"point": "AlarmControlerPress1", "name": "Alarma Controlador Presurización 1"},
+        "8": {"point": "AlarmControlerPress2", "name": "Alarma Controlador Presurización 2"},
+        "9": {"point": "AlarmControlerPress3", "name": "Alarma Controlador Presurización 3"},
+        "10": {"point": "AlarmControlerPress4", "name": "Alarma Controlador Presurización 4"}
+       }
+     }
+  }
+}

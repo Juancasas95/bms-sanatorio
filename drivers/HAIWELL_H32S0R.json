@@ -14,7 +14,9 @@
       "swap": false,
       "unit": "Bar",
       "decimals": 2,
-      "scan": 2000
+      "scan": 2000,
+      "read": true,
+      "write": false
     },
 
     "ColectorAirPressure": {
@@ -27,7 +29,9 @@
       "swap": false,
       "unit": "Bar",
       "decimals": 2,
-      "scan": 2000
+      "scan": 2000,
+      "read": true,
+      "write": false
     },
 
     "VaccumTanqPressure": {
@@ -40,7 +44,9 @@
       "swap": false,
       "unit": "Bar",
       "decimals": 2,
-      "scan": 2000
+      "scan": 2000,
+      "read": true,
+      "write": false
     },
 
     "MedicalAirRampPressure": {
@@ -53,7 +59,9 @@
       "swap": false,
       "unit": "Bar",
       "decimals": 2,
-      "scan": 2000
+      "scan": 2000,
+      "read": true,
+      "write": false
     },
 
     "AlarmAirTankLowPressure": {
@@ -62,7 +70,9 @@
       "address": 3392,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
       "AlarmAirTankHighPressure": {
@@ -71,7 +81,9 @@
       "address": 3393,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+	      "read": true,
+      "write": false
     },
 
      "AlarmAirColectorLowPressure": {
@@ -80,7 +92,9 @@
       "address": 3396,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
      "AlarmAirColectorHighPressure": {
@@ -89,7 +103,9 @@
       "address": 3397,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "Compressor1Operative": {
@@ -98,7 +114,9 @@
       "address": 1540,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "Compressor1Running": {
@@ -107,7 +125,9 @@
       "address": 1536,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "Compressor2Operative": {
@@ -116,7 +136,9 @@
       "address": 1541,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "Compressor2Running": {
@@ -125,7 +147,9 @@
       "address": 1537,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "AlarmUseCompressor1": {
@@ -134,7 +158,9 @@
       "address": 3372,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "AlarmUseCompressor2": {
@@ -143,7 +169,9 @@
       "address": 3373,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "AlarmRestCompressor1": {
@@ -152,7 +180,9 @@
       "address": 3374,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "AlarmRestCompressor2": {
@@ -161,7 +191,9 @@
       "address": 3375,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "AlarmPerfCompressor1": {
@@ -170,7 +202,9 @@
       "address": 3382,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "AlarmPerfCompressor2": {
@@ -179,7 +213,9 @@
       "address": 3383,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "AlarmCompressors": {
@@ -188,7 +224,12 @@
       "address": 3472,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false,
+      "alarm": true,
+      "severity": "CRITICAL",
+      "message": "Se detectó una alarma en la sala de compresores"
     },
 
     "VacuumPump1Operative": {
@@ -197,7 +238,9 @@
       "address": 1542,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "VacuumPump1Running": {
@@ -206,7 +249,9 @@
       "address": 1538,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "VacuumPump2Operative": {
@@ -215,7 +260,9 @@
       "address": 1543,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "VacuumPump2Running": {
@@ -224,7 +271,9 @@
       "address": 1539,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "AlarmLowVacuumPressure": {
@@ -233,7 +282,9 @@
       "address": 3322,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "AlarmHighVacuumPressure": {
@@ -242,7 +293,9 @@
       "address": 3323,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "AlarmFaultVacuumSensor": {
@@ -251,7 +304,9 @@
       "address": 3327,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "AlarmPerfVacuumPump1": {
@@ -260,7 +315,9 @@
       "address": 3328,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "AlarmPerfVacuumPump2": {
@@ -269,7 +326,9 @@
       "address": 3329,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
     "AlarmVacuumPumps": {
@@ -278,7 +337,12 @@
       "address": 3371,
       "quantity": 1,
       "type": "bool",
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false,
+      "alarm": true,
+      "severity": "CRITICAL",
+      "message": "Se detectó una alarma en la sala de compresores"
     },
 
 
@@ -292,7 +356,9 @@
       "swap": false,
       "unit": "seg",
       "decimals": 0,
-      "scan": 500
+      "scan": 500,
+      "read": true,
+      "write": false
     },
 
     "Compressor1RestTime": {
@@ -305,7 +371,9 @@
       "swap": false,
       "unit": "seg",
       "decimals": 0,
-      "scan": 500
+      "scan": 500,
+      "read": true,
+      "write": false
     },
 
     "Compressor1Starts": {
@@ -318,7 +386,9 @@
       "swap": false,
       "unit": "",
       "decimals": 0,
-      "scan": 5000
+      "scan": 5000,
+      "read": true,
+      "write": false
     },
 
     "Compressor2RunTime": {
@@ -331,7 +401,9 @@
       "swap": false,
       "unit": "seg",
       "decimals": 0,
-      "scan": 500
+      "scan": 500,
+      "read": true,
+      "write": false
     },
 
     "Compressor2RestTime": {
@@ -344,7 +416,9 @@
       "swap": false,
       "unit": "min",
       "decimals": 0,
-      "scan": 500
+      "scan": 500,
+      "read": true,
+      "write": false
     },
 
     "Compressor2Starts": {
@@ -357,7 +431,9 @@
       "swap": false,
       "unit": "",
       "decimals": 0,
-      "scan": 5000
+      "scan": 5000,
+      "read": true,
+      "write": false
     },
 
       "Compressor1AccumulatedTime": {
@@ -370,7 +446,9 @@
       "swap": false,
       "unit": "seg",
       "decimals": 0,
-      "scan": 500
+      "scan": 500,
+      "read": true,
+      "write": false
     },
 
       "Compressor2AccumulatedTime": {
@@ -383,7 +461,9 @@
       "swap": false,
       "unit": "seg",
       "decimals": 0,
-      "scan": 500
+      "scan": 500,
+      "read": true,
+      "write": false
     },
 
       "Compressor1RestRelation": {
@@ -396,7 +476,9 @@
       "swap": false,
       "unit": "seg",
       "decimals": 0,
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
       "Compressor2RestRelation": {
@@ -409,7 +491,9 @@
       "swap": false,
       "unit": "seg",
       "decimals": 0,
-      "scan": 1000
+      "scan": 1000,
+      "read": true,
+      "write": false
     },
 
       "VacuumPump1RunTime": {
@@ -422,7 +506,9 @@
       "swap": false,
       "unit": "seg",
       "decimals": 0,
-      "scan": 500
+      "scan": 500,
+      "read": true,
+      "write": false
     },
 
     "VacuumPump1RestTime": {
@@ -435,7 +521,9 @@
       "swap": false,
       "unit": "seg",
       "decimals": 0,
-      "scan": 500
+      "scan": 500,
+      "read": true,
+      "write": false
     },
 
       "VacuumPump2RunTime": {
@@ -448,7 +536,9 @@
       "swap": false,
       "unit": "seg",
       "decimals": 0,
-      "scan": 500
+      "scan": 500,
+      "read": true,
+      "write": false
     },
 
     "VacuumPump2RestTime": {
@@ -461,7 +551,53 @@
       "swap": false,
       "unit": "seg",
       "decimals": 0,
-      "scan": 500
+      "scan": 500,
+      "read": true,
+      "write": false
+    },
+
+    "VacuumResetAlarmButton": {
+      "name": "Boton reset alarmas vacio",
+      "fc": 5,
+      "address": 3573,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000,
+      "read": false,
+      "write": true
+    },
+
+    "VacuumMuteAlarmButton": {
+      "name": "Boton Silencio alarmas vacio",
+      "fc": 5,
+      "address": 3370,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000,
+      "read": false,
+      "write": true
+    },
+
+    "CompressorResetAlarmButton": {
+      "name": "Boton reset alarmas compresores",
+      "fc": 5,
+      "address": 3572,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000,
+      "read": false,
+      "write": true
+    },
+
+     "CompressorMuteAlarmButton": {
+      "name": "Boton Silencio alarmas compresores",
+      "fc": 5,
+      "address": 3471,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000,
+      "read": false,
+      "write": true
     }
   }
 }

@@ -4,6 +4,8 @@
     "version": "0.0.1",
     "private": true,
     "dependencies": {
-        "node-red-contrib-modbus": "~5.45.2"
+        "node-red-contrib-modbus": "~5.45.2",
+        "node-red-contrib-whatsapp-api": "~0.1.2",
+        "node-red-node-email": "~5.2.5"
     }
 }
