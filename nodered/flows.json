@@ -205,7 +205,7 @@
         "id": "9b9982ad2806f380",
         "type": "file in",
         "z": "548bfb93b2adf834",
-        "name": "",
+        "name": "Read gateways.json",
         "filename": "/config/gateways.json",
         "filenameType": "str",
         "format": "utf8",
@@ -213,8 +213,8 @@
         "sendError": false,
         "encoding": "none",
         "allProps": false,
-        "x": 440,
-        "y": 220,
+        "x": 640,
+        "y": 40,
         "wires": [
             [
                 "96e574ff7fe5cb22"
@@ -226,19 +226,18 @@
         "type": "function",
         "z": "548bfb93b2adf834",
         "name": "Store gateway",
-        "func": "const gateways = JSON.parse(msg.payload);\n\nglobal.set(\"gateways\", gateways);\n\nnode.status({\n    fill: \"green\",\n    shape: \"dot\",\n    text: Object.keys(gateways).length + \" gateways\"\n});\n\nreturn msg;",
+        "func": "// ======================================================\n// STORE GATEWAYS\n// ======================================================\n\nconst component = \"gateways\";\n\ntry {\n\n    // --------------------------------------------------\n    // PARSEAR JSON\n    // --------------------------------------------------\n\n    const gateways = JSON.parse(msg.payload);\n\n\n    // --------------------------------------------------\n    // VALIDACIÓN BÁSICA\n    // --------------------------------------------------\n\n    if (\n        !gateways ||\n        typeof gateways !== \"object\" ||\n        Array.isArray(gateways)\n    ) {\n        throw new Error(\n            \"gateways.json no contiene un objeto JSON válido.\"\n        );\n    }\n\n\n    const gatewayIds = Object.keys(gateways);\n\n\n    if (gatewayIds.length === 0) {\n        throw new Error(\n            \"gateways.json no contiene gateways.\"\n        );\n    }\n\n\n    // --------------------------------------------------\n    // GUARDAR CONFIGURACIÓN\n    // --------------------------------------------------\n\n    global.set(\"gateways\", gateways);\n\n\n    // --------------------------------------------------\n    // ESTADO\n    // --------------------------------------------------\n\n    node.status({\n        fill: \"green\",\n        shape: \"dot\",\n        text: gatewayIds.length + \" gateways\"\n    });\n\n\n    // --------------------------------------------------\n    // EVENTO PARA STARTUP COORDINATOR\n    // --------------------------------------------------\n\n    msg.startupEvent = {\n\n        component: component,\n\n        ok: true,\n\n        count: gatewayIds.length,\n\n        error: null,\n\n        timestamp: new Date().toISOString()\n\n    };\n\n\n    msg.payload = gateways;\n\n    return msg;\n\n\n} catch (err) {\n\n    // Una configuración inválida NO debe conservarse\n    // como válida en memoria.\n\n    global.set(\"gateways\", null);\n\n\n    node.status({\n        fill: \"red\",\n        shape: \"ring\",\n        text: \"ERROR\"\n    });\n\n\n    msg.startupEvent = {\n\n        component: component,\n\n        ok: false,\n\n        count: 0,\n\n        error: err.message,\n\n        timestamp: new Date().toISOString()\n\n    };\n\n\n    msg.payload = null;\n\n    return msg;\n}",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 660,
-        "y": 220,
+        "x": 840,
+        "y": 40,
         "wires": [
             [
-                "f82a41e075ee70b1",
-                "3dabc913f1520aa6"
+                "87157c53317ae978"
             ]
         ]
     },
@@ -246,7 +245,7 @@
         "id": "919a7d4bc66c44a3",
         "type": "file in",
         "z": "548bfb93b2adf834",
-        "name": "",
+        "name": "Read devices.json",
         "filename": "/config/devices.json",
         "filenameType": "str",
         "format": "utf8",
@@ -254,8 +253,8 @@
         "sendError": false,
         "encoding": "none",
         "allProps": false,
-        "x": 430,
-        "y": 320,
+        "x": 630,
+        "y": 100,
         "wires": [
             [
                 "ff758161dc2b7b51"
@@ -267,18 +266,18 @@
         "type": "function",
         "z": "548bfb93b2adf834",
         "name": "Store devices",
-        "func": "const devices = JSON.parse(msg.payload);\n\nglobal.set(\"devices\", devices);\n\nnode.status({\n    fill:\"green\",\n    shape:\"dot\",\n    text:Object.keys(devices).length+\" devices\"\n});\n\nreturn msg;",
+        "func": "// ======================================================\n// STORE DEVICES\n// ======================================================\n\nconst component = \"devices\";\n\ntry {\n\n    // --------------------------------------------------\n    // PARSEAR JSON\n    // --------------------------------------------------\n\n    const devices = JSON.parse(msg.payload);\n\n\n    // --------------------------------------------------\n    // VALIDACIÓN BÁSICA\n    // --------------------------------------------------\n\n    if (\n        !devices ||\n        typeof devices !== \"object\" ||\n        Array.isArray(devices)\n    ) {\n        throw new Error(\n            \"devices.json no contiene un objeto JSON válido.\"\n        );\n    }\n\n\n    const deviceIds = Object.keys(devices);\n\n\n    if (deviceIds.length === 0) {\n        throw new Error(\n            \"devices.json no contiene dispositivos.\"\n        );\n    }\n\n\n    // --------------------------------------------------\n    // GUARDAR CONFIGURACIÓN\n    // --------------------------------------------------\n\n    global.set(\"devices\", devices);\n\n\n    // --------------------------------------------------\n    // ESTADO VISUAL\n    // --------------------------------------------------\n\n    node.status({\n        fill: \"green\",\n        shape: \"dot\",\n        text: deviceIds.length + \" devices\"\n    });\n\n\n    // --------------------------------------------------\n    // EVENTO PARA STARTUP COORDINATOR\n    // --------------------------------------------------\n\n    msg.startupEvent = {\n\n        component: component,\n\n        ok: true,\n\n        count: deviceIds.length,\n\n        error: null,\n\n        timestamp: new Date().toISOString()\n\n    };\n\n\n    msg.payload = devices;\n\n    return msg;\n\n\n} catch (err) {\n\n    global.set(\"devices\", null);\n\n\n    node.status({\n        fill: \"red\",\n        shape: \"ring\",\n        text: \"ERROR\"\n    });\n\n\n    msg.startupEvent = {\n\n        component: component,\n\n        ok: false,\n\n        count: 0,\n\n        error: err.message,\n\n        timestamp: new Date().toISOString()\n\n    };\n\n\n    msg.payload = null;\n\n    return msg;\n}",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 660,
-        "y": 320,
+        "x": 840,
+        "y": 100,
         "wires": [
             [
-                "f82a41e075ee70b1"
+                "87157c53317ae978"
             ]
         ]
     },
@@ -287,53 +286,19 @@
         "type": "function",
         "z": "548bfb93b2adf834",
         "name": "Store drivers",
-        "func": "const fs = global.get(\"fs\");\nconst path = global.get(\"path\");\n\nif (!fs || !path) {\n    node.error(\"fs o path no están cargados.\");\n    return null;\n}\n\nconst drivers = {};\n\ntry {\n\n    // Leer todos los archivos de la carpeta\n    const files = fs.readdirSync(\"/drivers\");\n\n    for (const file of files) {\n\n        // Ignorar todo lo que no sea JSON\n        if (!file.endsWith(\".json\")) {\n            continue;\n        }\n\n        // Ruta completa\n        const fullPath = path.join(\"/drivers\", file);\n\n        // Leer archivo\n        const json = fs.readFileSync(fullPath, \"utf8\");\n\n        // Convertir texto a objeto\n        const driver = JSON.parse(json);\n\n        // Nombre del driver = nombre del archivo\n        const driverId = path.basename(file, \".json\");\n\n        drivers[driverId] = driver;\n    }\n\n    global.set(\"drivers\", drivers);\n\n    node.status({\n        fill: \"green\",\n        shape: \"dot\",\n        text: Object.keys(drivers).length + \" drivers\"\n    });\n\n    msg.payload = drivers;\n\n    return msg;\n\n} catch(err) {\n\n    node.status({\n        fill: \"red\",\n        shape: \"ring\",\n        text: err.message\n    });\n\n    node.error(err);\n\n    return null;\n\n}",
+        "func": "// ======================================================\n// STORE DRIVERS\n// ======================================================\n\nconst component = \"drivers\";\n\nconst fs = global.get(\"fs\");\nconst path = global.get(\"path\");\n\n\n// ------------------------------------------------------\n// FUNCIÓN DE ERROR\n// ------------------------------------------------------\n\nfunction fail(message) {\n\n    global.set(\"drivers\", null);\n\n    node.status({\n        fill: \"red\",\n        shape: \"ring\",\n        text: \"ERROR\"\n    });\n\n    msg.startupEvent = {\n\n        component: component,\n\n        ok: false,\n\n        count: 0,\n\n        error: message,\n\n        timestamp: new Date().toISOString()\n\n    };\n\n    msg.payload = null;\n\n    return msg;\n}\n\n\n// ------------------------------------------------------\n// VALIDAR LIBRERÍAS\n// ------------------------------------------------------\n\nif (!fs || !path) {\n\n    return fail(\n        \"fs o path no están cargados.\"\n    );\n}\n\n\n// ------------------------------------------------------\n// CARGAR DRIVERS\n// ------------------------------------------------------\n\ntry {\n\n    const drivers = {};\n\n    const files = fs\n        .readdirSync(\"/drivers\")\n        .filter(file => file.endsWith(\".json\"));\n\n\n    if (files.length === 0) {\n\n        return fail(\n            \"No se encontraron drivers JSON en /drivers.\"\n        );\n    }\n\n\n    for (const file of files) {\n\n        const fullPath =\n            path.join(\"/drivers\", file);\n\n        let driver;\n\n\n        try {\n\n            const json =\n                fs.readFileSync(fullPath, \"utf8\");\n\n            driver = JSON.parse(json);\n\n        } catch (err) {\n\n            throw new Error(\n                `${file}: ${err.message}`\n            );\n        }\n\n\n        if (\n            !driver ||\n            typeof driver !== \"object\" ||\n            Array.isArray(driver)\n        ) {\n\n            throw new Error(\n                `${file}: el contenido no es un objeto JSON válido.`\n            );\n        }\n\n\n        const driverId =\n            path.basename(file, \".json\");\n\n\n        drivers[driverId] = driver;\n    }\n\n\n    // --------------------------------------------------\n    // GUARDAR\n    // --------------------------------------------------\n\n    global.set(\"drivers\", drivers);\n\n\n    const driverIds =\n        Object.keys(drivers);\n\n\n    node.status({\n        fill: \"green\",\n        shape: \"dot\",\n        text: driverIds.length + \" drivers\"\n    });\n\n\n    // --------------------------------------------------\n    // EVENTO STARTUP\n    // --------------------------------------------------\n\n    msg.startupEvent = {\n\n        component: component,\n\n        ok: true,\n\n        count: driverIds.length,\n\n        error: null,\n\n        timestamp: new Date().toISOString()\n\n    };\n\n\n    msg.payload = drivers;\n\n    return msg;\n\n\n} catch (err) {\n\n    return fail(err.message);\n}",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 490,
-        "y": 420,
+        "x": 630,
+        "y": 160,
         "wires": [
-            []
-        ]
-    },
-    {
-        "id": "f94f8bdbdb83f18d",
-        "type": "function",
-        "z": "548bfb93b2adf834",
-        "name": "Decode Value",
-        "func": "function registersToFloat(registers) {\n\n    const buffer = Buffer.alloc(4);\n\n    buffer.writeUInt16BE(registers[0], 0);\n    buffer.writeUInt16BE(registers[1], 2);\n\n    return buffer.readFloatBE(0);\n\n}\n\nlet value;\n\nswitch (msg.variable.type) {\n\n    case \"float\":\n\n        value = registersToFloat(msg.payload);\n\n        break;\n\n    default:\n\n        node.error(\"Tipo de dato no soportado: \" + msg.variable.type);\n        return null;\n}\n\nmsg.payload = {\n\n    point: msg.point,\n\n    value: Number(value.toFixed(msg.variable.decimals))\n\n};\n\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 420,
-        "y": 820,
-        "wires": [
-            []
-        ]
-    },
-    {
-        "id": "7b4d6d0a93884e43",
-        "type": "function",
-        "z": "548bfb93b2adf834",
-        "name": "Buid Measurement",
-        "func": "msg.payload = {\n\n    deviceId: msg.device.id,\n\n    timestamp: new Date().toISOString(),\n\n    measurements: msg.payload\n\n};\n\nreturn msg;",
-        "outputs": 1,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 730,
-        "y": 840,
-        "wires": [
-            []
+            [
+                "87157c53317ae978"
+            ]
         ]
     },
     {
@@ -353,17 +318,15 @@
         "repeat": "",
         "crontab": "",
         "once": true,
-        "onceDelay": "1",
+        "onceDelay": "0.1",
         "topic": "",
         "payload": "",
         "payloadType": "date",
-        "x": 200,
-        "y": 320,
+        "x": 100,
+        "y": 120,
         "wires": [
             [
-                "9b9982ad2806f380",
-                "919a7d4bc66c44a3",
-                "a38f4c9cd0c26bf0"
+                "751e59ba1931592b"
             ]
         ]
     },
@@ -371,18 +334,21 @@
         "id": "f82a41e075ee70b1",
         "type": "function",
         "z": "548bfb93b2adf834",
-        "name": "System Ready ",
-        "func": "global.set(\"systemReady\", true);\n\nnode.status({\n    fill:\"green\",\n    shape:\"dot\",\n    text:\"READY\"\n});\n\nnode.warn(\"========== BMS READY ==========\");\n\nreturn msg;",
+        "name": "System State ",
+        "func": "// ======================================================\n// SYSTEM STATE\n// ======================================================\n//\n// Representa el estado GLOBAL del BMS.\n//\n// PRIORIDAD:\n//\n// 1. FAULT\n// 2. READY\n// 3. LOADING\n//\n// IMPORTANTE:\n// Los mensajes mantienen msg.startup durante todo el\n// recorrido del Startup.\n//\n// Por eso READY y FAULT deben evaluarse ANTES que\n// LOADING.\n// ======================================================\n\n\n// ======================================================\n// 1. FAULT\n// ======================================================\n\nif (\n    msg.payload &&\n    msg.payload.status === \"FAULT\"\n) {\n\n    global.set(\n        \"systemReady\",\n        false\n    );\n\n\n    node.status({\n\n        fill: \"red\",\n\n        shape: \"dot\",\n\n        text: \"FAULT\"\n\n    });\n\n\n    return null;\n}\n\n\n// ======================================================\n// 2. READY\n// ======================================================\n\nif (\n    msg.validation &&\n    msg.validation.ok === true\n) {\n\n    let state =\n        global.get(\"startupState\");\n\n\n    if (!state) {\n\n        global.set(\n            \"systemReady\",\n            false\n        );\n\n\n        node.status({\n\n            fill: \"red\",\n\n            shape: \"ring\",\n\n            text: \"NO STARTUP STATE\"\n\n        });\n\n\n        node.error(\n            \"No existe startupState.\"\n        );\n\n\n        return null;\n    }\n\n\n    // --------------------------------------------------\n    // ACTUALIZAR ESTADO\n    // --------------------------------------------------\n\n    const now =\n        Date.now();\n\n\n    state.status =\n        \"READY\";\n\n\n    state.readyAt =\n        new Date(now).toISOString();\n\n\n    const startedAt =\n        Date.parse(state.startedAt);\n\n\n    state.durationMs =\n        Number.isFinite(startedAt)\n            ? now - startedAt\n            : null;\n\n\n    global.set(\n        \"startupState\",\n        state\n    );\n\n\n    // --------------------------------------------------\n    // HABILITAR SISTEMA\n    // --------------------------------------------------\n\n    global.set(\n        \"systemReady\",\n        true\n    );\n\n\n    // --------------------------------------------------\n    // ESTADO VISUAL\n    // --------------------------------------------------\n\n    node.status({\n\n        fill: \"green\",\n\n        shape: \"dot\",\n\n        text: \"READY\"\n\n    });\n\n\n    node.warn(\n        \"========== BMS READY ==========\"\n    );\n\n\n    // --------------------------------------------------\n    // MENSAJE DE SALIDA\n    // --------------------------------------------------\n\n    msg.payload = {\n\n        status: \"READY\",\n\n        timestamp:\n            state.readyAt,\n\n        startupDurationMs:\n            state.durationMs,\n\n        components: {\n\n            gateways:\n                state.components.gateways.count,\n\n            devices:\n                state.components.devices.count,\n\n            drivers:\n                state.components.drivers.count\n\n        },\n\n        warnings:\n            state.validation?.warnings || []\n\n    };\n\n\n    return msg;\n}\n\n\n// ======================================================\n// 3. LOADING\n// ======================================================\n\nif (\n    msg.startup &&\n    msg.startup.action === \"LOAD_ALL\"\n) {\n\n    global.set(\n        \"systemReady\",\n        false\n    );\n\n\n    node.status({\n\n        fill: \"yellow\",\n\n        shape: \"ring\",\n\n        text: \"LOADING\"\n\n    });\n\n\n    return null;\n}\n\n\n// ======================================================\n// 4. MENSAJE NO RECONOCIDO\n// ======================================================\n\nnode.warn(\n    \"System State recibió un mensaje sin estado reconocido.\"\n);\n\nreturn null;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 880,
-        "y": 280,
+        "x": 670,
+        "y": 260,
         "wires": [
-            []
+            [
+                "3dabc913f1520aa6",
+                "935cbaa9db74671d"
+            ]
         ]
     },
     {
@@ -406,11 +372,11 @@
         "topic": "",
         "payload": "",
         "payloadType": "date",
-        "x": 210,
-        "y": 400,
+        "x": 110,
+        "y": 180,
         "wires": [
             [
-                "919a7d4bc66c44a3"
+                "751e59ba1931592b"
             ]
         ]
     },
@@ -418,8 +384,8 @@
         "id": "3dabc913f1520aa6",
         "type": "debug",
         "z": "548bfb93b2adf834",
-        "name": "debug 2",
-        "active": false,
+        "name": "BMS Ready",
+        "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -427,8 +393,163 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 880,
-        "y": 420,
+        "x": 910,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "751e59ba1931592b",
+        "type": "function",
+        "z": "548bfb93b2adf834",
+        "name": "Init Startup State",
+        "func": "// ======================================================\n// INIT STARTUP STATE\n// ======================================================\n// Inicializa un nuevo ciclo de arranque/configuración.\n//\n// OUTPUT 1:\n//   Dispara la carga de gateways, devices y drivers.\n//\n// OUTPUT 2:\n//   Dispara el watchdog de timeout del Startup.\n// ======================================================\n\nconst now = Date.now();\n\nconst runId =\n    now.toString(36) +\n    \"-\" +\n    Math.random().toString(16).slice(2);\n\n\n// ------------------------------------------------------\n// ESTADO INICIAL\n// ------------------------------------------------------\n\nconst startupState = {\n\n    runId: runId,\n\n    status: \"LOADING\",\n\n    startedAt: new Date(now).toISOString(),\n\n    readyAt: null,\n\n    durationMs: null,\n\n    components: {\n\n        gateways: {\n            reported: false,\n            ok: false,\n            count: 0,\n            error: null\n        },\n\n        devices: {\n            reported: false,\n            ok: false,\n            count: 0,\n            error: null\n        },\n\n        drivers: {\n            reported: false,\n            ok: false,\n            count: 0,\n            error: null\n        }\n\n    },\n\n    validation: {\n        ok: false,\n        errors: [],\n        warnings: []\n    },\n\n    errors: []\n\n};\n\n\n// ------------------------------------------------------\n// CERRAR EL GATE DEL SISTEMA\n// ------------------------------------------------------\n\nglobal.set(\"systemReady\", false);\n\nglobal.set(\"startupState\", startupState);\n\n\n// ------------------------------------------------------\n// ESTADO VISUAL\n// ------------------------------------------------------\n\nnode.status({\n    fill: \"yellow\",\n    shape: \"ring\",\n    text: \"LOADING\"\n});\n\n\n// ------------------------------------------------------\n// MENSAJE DE STARTUP\n// ------------------------------------------------------\n\nmsg.startupRunId = runId;\n\nmsg.startup = {\n    action: \"LOAD_ALL\",\n    runId: runId,\n    timestamp: startupState.startedAt\n};\n\n\n// Creamos dos mensajes independientes.\nconst loadMsg = RED.util.cloneMessage(msg);\nconst timeoutMsg = RED.util.cloneMessage(msg);\n\n\n// OUTPUT 1 = carga\n// OUTPUT 2 = watchdog\n\nreturn [\n    loadMsg,\n    timeoutMsg\n];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 350,
+        "y": 120,
+        "wires": [
+            [
+                "9b9982ad2806f380",
+                "919a7d4bc66c44a3",
+                "a38f4c9cd0c26bf0",
+                "f82a41e075ee70b1"
+            ],
+            [
+                "a58d43f52202b069"
+            ]
+        ]
+    },
+    {
+        "id": "87157c53317ae978",
+        "type": "function",
+        "z": "548bfb93b2adf834",
+        "name": "Startup Coordinator",
+        "func": "// ======================================================\n// STARTUP COORDINATOR\n// ======================================================\n//\n// Espera el reporte de:\n//\n// gateways\n// devices\n// drivers\n//\n// Ningún componente individual puede declarar\n// al BMS como READY.\n// ======================================================\n\nconst event = msg.startupEvent;\n\nlet state = global.get(\"startupState\");\n\n\n// ------------------------------------------------------\n// VALIDACIONES\n// ------------------------------------------------------\n\nif (!state) {\n\n    node.warn(\n        \"Startup Coordinator recibió un mensaje sin startupState.\"\n    );\n\n    return [null, null];\n}\n\n\nif (!event || !event.component) {\n\n    node.warn(\n        \"Startup Coordinator recibió un mensaje sin startupEvent.\"\n    );\n\n    return [null, null];\n}\n\n\n// Ignorar mensajes pertenecientes a un startup anterior.\n\nif (\n    msg.startupRunId &&\n    msg.startupRunId !== state.runId\n) {\n\n    node.warn(\n        \"Ignorado mensaje perteneciente a un Startup anterior.\"\n    );\n\n    return [null, null];\n}\n\n\nif (!state.components[event.component]) {\n\n    node.warn(\n        `Componente de Startup desconocido: ${event.component}`\n    );\n\n    return [null, null];\n}\n\n\n// ------------------------------------------------------\n// REGISTRAR RESULTADO\n// ------------------------------------------------------\n\nstate.components[event.component] = {\n\n    reported: true,\n\n    ok: event.ok === true,\n\n    count: Number(event.count || 0),\n\n    error: event.error || null\n\n};\n\n\nglobal.set(\"startupState\", state);\n\n\n// ------------------------------------------------------\n// VER CUÁNTOS RESPONDIERON\n// ------------------------------------------------------\n\nconst componentNames =\n    Object.keys(state.components);\n\n\nconst reportedCount =\n    componentNames.filter(\n        name =>\n            state.components[name].reported === true\n    ).length;\n\n\nnode.status({\n\n    fill: \"yellow\",\n\n    shape: \"ring\",\n\n    text:\n        `LOADING ${reportedCount}/${componentNames.length}`\n\n});\n\n\n// ------------------------------------------------------\n// TODAVÍA FALTA ALGÚN COMPONENTE\n// ------------------------------------------------------\n\nif (reportedCount < componentNames.length) {\n\n    return [null, null];\n}\n\n\n// ------------------------------------------------------\n// EVITAR EJECUTAR DOS VECES\n// ------------------------------------------------------\n\nif (state.coordinatorCompleted === true) {\n\n    return [null, null];\n}\n\n\nstate.coordinatorCompleted = true;\n\n\n// ------------------------------------------------------\n// COMPROBAR ERRORES\n// ------------------------------------------------------\n\nconst failedComponents =\n    componentNames.filter(\n        name =>\n            state.components[name].ok !== true\n    );\n\n\nif (failedComponents.length > 0) {\n\n    const errors =\n        failedComponents.map(name => {\n\n            const component =\n                state.components[name];\n\n            return (\n                `${name}: ` +\n                (component.error || \"error desconocido\")\n            );\n        });\n\n\n    state.status = \"FAULT\";\n\n    state.errors = errors;\n\n    global.set(\"startupState\", state);\n\n    global.set(\"systemReady\", false);\n\n\n    node.status({\n\n        fill: \"red\",\n\n        shape: \"ring\",\n\n        text: \"FAULT\"\n\n    });\n\n\n    msg.payload = {\n\n        status: \"FAULT\",\n\n        stage: \"LOAD\",\n\n        errors: errors\n\n    };\n\n\n    return [null, msg];\n}\n\n\n// ------------------------------------------------------\n// TODOS CARGADOS CORRECTAMENTE\n// ------------------------------------------------------\n\nstate.status = \"VALIDATING\";\n\nglobal.set(\"startupState\", state);\n\n\nnode.status({\n\n    fill: \"yellow\",\n\n    shape: \"dot\",\n\n    text: \"VALIDATING\"\n\n});\n\n\nmsg.payload = {\n\n    gateways:\n        state.components.gateways.count,\n\n    devices:\n        state.components.devices.count,\n\n    drivers:\n        state.components.drivers.count\n\n};\n\n\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1070,
+        "y": 160,
+        "wires": [
+            [
+                "28993352c75b76c0"
+            ],
+            [
+                "935cbaa9db74671d"
+            ]
+        ]
+    },
+    {
+        "id": "a58d43f52202b069",
+        "type": "delay",
+        "z": "548bfb93b2adf834",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 160,
+        "y": 280,
+        "wires": [
+            [
+                "c12e3d9cc0e0a230"
+            ]
+        ]
+    },
+    {
+        "id": "c12e3d9cc0e0a230",
+        "type": "function",
+        "z": "548bfb93b2adf834",
+        "name": "startup tmeout check",
+        "func": "// ======================================================\n// STARTUP TIMEOUT CHECK\n// ======================================================\n\nconst state =\n    global.get(\"startupState\");\n\n\n// No existe Startup activo.\n\nif (!state) {\n    return null;\n}\n\n\n// Este timeout pertenece a un Startup viejo.\n\nif (\n    msg.startupRunId !== state.runId\n) {\n    return null;\n}\n\n\n// El Startup ya terminó.\n\nif (\n    state.status === \"READY\" ||\n    state.status === \"FAULT\"\n) {\n    return null;\n}\n\n\n// ------------------------------------------------------\n// COMPONENTES QUE NO RESPONDIERON\n// ------------------------------------------------------\n\nconst missing =\n    Object.keys(state.components)\n        .filter(\n            name =>\n                state.components[name].reported !== true\n        );\n\n\nif (missing.length === 0) {\n\n    // Todos reportaron.\n    // Si estamos acá, la validación está procesándose.\n    return null;\n}\n\n\n// ------------------------------------------------------\n// TIMEOUT\n// ------------------------------------------------------\n\nmsg.payload = {\n\n    status: \"FAULT\",\n\n    stage: \"TIMEOUT\",\n\n    errors: missing.map(\n        name =>\n            `Timeout esperando componente: ${name}`\n    )\n\n};\n\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 280,
+        "wires": [
+            [
+                "935cbaa9db74671d"
+            ]
+        ]
+    },
+    {
+        "id": "28993352c75b76c0",
+        "type": "function",
+        "z": "548bfb93b2adf834",
+        "name": "Validate Configuration",
+        "func": "// ======================================================\n// VALIDATE CONFIGURATION\n// ======================================================\n\nconst gateways = global.get(\"gateways\");\nconst devices = global.get(\"devices\");\nconst drivers = global.get(\"drivers\");\n\nconst errors = [];\nconst warnings = [];\n\n\n// ------------------------------------------------------\n// HELPERS\n// ------------------------------------------------------\n\nfunction isObject(value) {\n\n    return (\n        value !== null &&\n        typeof value === \"object\" &&\n        !Array.isArray(value)\n    );\n}\n\n\nconst supportedTypes = new Set([\n\n    \"bool\",\n    \"uint16\",\n    \"int16\",\n    \"uint32\",\n    \"int32\",\n    \"float\",\n    \"bitmask\"\n\n]);\n\n\nconst readFunctionCodes =\n    new Set([1, 2, 3, 4]);\n\n\n// ======================================================\n// CONFIGURACIONES PRINCIPALES\n// ======================================================\n\nif (!isObject(gateways)) {\n\n    errors.push(\n        \"global.gateways no es válido.\"\n    );\n}\n\n\nif (!isObject(devices)) {\n\n    errors.push(\n        \"global.devices no es válido.\"\n    );\n}\n\n\nif (!isObject(drivers)) {\n\n    errors.push(\n        \"global.drivers no es válido.\"\n    );\n}\n\n\n// Si las estructuras base no existen,\n// no tiene sentido seguir validando.\n\nif (errors.length === 0) {\n\n    // ==================================================\n    // DEVICES\n    // ==================================================\n\n    for (\n        const [deviceId, device]\n        of Object.entries(devices)\n    ) {\n\n        if (!isObject(device)) {\n\n            errors.push(\n                `Device ${deviceId}: configuración inválida.`\n            );\n\n            continue;\n        }\n\n\n        // ----------------------------------------------\n        // GATEWAY\n        // ----------------------------------------------\n\n        if (\n            typeof device.gateway !== \"string\" ||\n            device.gateway.trim() === \"\"\n        ) {\n\n            errors.push(\n                `Device ${deviceId}: gateway inválido.`\n            );\n\n        } else if (\n            !Object.prototype.hasOwnProperty.call(\n                gateways,\n                device.gateway\n            )\n        ) {\n\n            errors.push(\n                `Device ${deviceId}: gateway ` +\n                `${device.gateway} inexistente.`\n            );\n        }\n\n\n        // ----------------------------------------------\n        // DRIVER\n        // ----------------------------------------------\n\n        if (\n            typeof device.driver !== \"string\" ||\n            device.driver.trim() === \"\"\n        ) {\n\n            errors.push(\n                `Device ${deviceId}: driver inválido.`\n            );\n\n        } else if (\n            !Object.prototype.hasOwnProperty.call(\n                drivers,\n                device.driver\n            )\n        ) {\n\n            errors.push(\n                `Device ${deviceId}: driver ` +\n                `${device.driver} inexistente.`\n            );\n        }\n\n\n        // ----------------------------------------------\n        // MODBUS SLAVE\n        // ----------------------------------------------\n\n        const slave =\n            Number(device.slave);\n\n\n        if (\n            !Number.isInteger(slave) ||\n            slave < 1 ||\n            slave > 247\n        ) {\n\n            errors.push(\n                `Device ${deviceId}: slave Modbus inválido ` +\n                `(${device.slave}).`\n            );\n        }\n    }\n\n\n    // ==================================================\n    // DRIVERS\n    // ==================================================\n\n    for (\n        const [driverId, driver]\n        of Object.entries(drivers)\n    ) {\n\n        if (!isObject(driver)) {\n\n            errors.push(\n                `Driver ${driverId}: configuración inválida.`\n            );\n\n            continue;\n        }\n\n\n        if (!isObject(driver.variables)) {\n\n            errors.push(\n                `Driver ${driverId}: no contiene variables válidas.`\n            );\n\n            continue;\n        }\n\n\n        const variableNames =\n            Object.keys(driver.variables);\n\n\n        if (variableNames.length === 0) {\n\n            warnings.push(\n                `Driver ${driverId}: no contiene variables.`\n            );\n        }\n\n\n        // ----------------------------------------------\n        // VARIABLES\n        // ----------------------------------------------\n\n        for (\n            const [variableId, variable]\n            of Object.entries(driver.variables)\n        ) {\n\n            if (!isObject(variable)) {\n\n                errors.push(\n                    `Driver ${driverId} / ${variableId}: ` +\n                    `variable inválida.`\n                );\n\n                continue;\n            }\n\n\n            // Solo validamos parámetros de lectura\n            // cuando read === true.\n\n            if (variable.read !== true) {\n                continue;\n            }\n\n\n            // ------------------------------------------\n            // FUNCTION CODE\n            // ------------------------------------------\n\n            const fc =\n                Number(variable.fc);\n\n\n            if (\n                !Number.isInteger(fc) ||\n                !readFunctionCodes.has(fc)\n            ) {\n\n                errors.push(\n                    `Driver ${driverId} / ${variableId}: ` +\n                    `FC de lectura inválido (${variable.fc}).`\n                );\n            }\n\n\n            // ------------------------------------------\n            // ADDRESS\n            // ------------------------------------------\n\n            const address =\n                Number(variable.address);\n\n\n            if (\n                !Number.isInteger(address) ||\n                address < 0\n            ) {\n\n                errors.push(\n                    `Driver ${driverId} / ${variableId}: ` +\n                    `address inválido (${variable.address}).`\n                );\n            }\n\n\n            // ------------------------------------------\n            // QUANTITY\n            // ------------------------------------------\n\n            const quantity =\n                Number(variable.quantity);\n\n\n            if (\n                !Number.isInteger(quantity) ||\n                quantity < 1\n            ) {\n\n                errors.push(\n                    `Driver ${driverId} / ${variableId}: ` +\n                    `quantity inválido (${variable.quantity}).`\n                );\n            }\n\n\n            // ------------------------------------------\n            // TYPE\n            // ------------------------------------------\n\n            if (\n                typeof variable.type !== \"string\" ||\n                !supportedTypes.has(variable.type)\n            ) {\n\n                errors.push(\n                    `Driver ${driverId} / ${variableId}: ` +\n                    `tipo no soportado (${variable.type}).`\n                );\n            }\n\n\n            // ------------------------------------------\n            // SCAN\n            // ------------------------------------------\n\n            if (variable.scan !== undefined) {\n\n                const scan =\n                    Number(variable.scan);\n\n\n                if (\n                    !Number.isFinite(scan) ||\n                    scan < 0\n                ) {\n\n                    errors.push(\n                        `Driver ${driverId} / ${variableId}: ` +\n                        `scan inválido (${variable.scan}).`\n                    );\n                }\n            }\n\n\n            // ------------------------------------------\n            // MULTIPLIER\n            // ------------------------------------------\n\n            if (\n                variable.multiplier !== undefined &&\n                !Number.isFinite(\n                    Number(variable.multiplier)\n                )\n            ) {\n\n                errors.push(\n                    `Driver ${driverId} / ${variableId}: ` +\n                    `multiplier inválido.`\n                );\n            }\n\n\n            // ------------------------------------------\n            // DECIMALS\n            // ------------------------------------------\n\n            if (variable.decimals !== undefined) {\n\n                const decimals =\n                    Number(variable.decimals);\n\n\n                if (\n                    !Number.isInteger(decimals) ||\n                    decimals < 0\n                ) {\n\n                    errors.push(\n                        `Driver ${driverId} / ${variableId}: ` +\n                        `decimals inválido.`\n                    );\n                }\n            }\n\n\n            // ------------------------------------------\n            // BITMASK\n            // ------------------------------------------\n\n            if (variable.type === \"bitmask\") {\n\n                if (!isObject(variable.bits)) {\n\n                    errors.push(\n                        `Driver ${driverId} / ${variableId}: ` +\n                        `bitmask sin bits configurados.`\n                    );\n\n                } else {\n\n                    for (\n                        const [bitIndex, bitConfig]\n                        of Object.entries(variable.bits)\n                    ) {\n\n                        const index =\n                            Number(bitIndex);\n\n\n                        if (\n                            !Number.isInteger(index) ||\n                            index < 0 ||\n                            index > 15\n                        ) {\n\n                            errors.push(\n                                `Driver ${driverId} / ${variableId}: ` +\n                                `bit ${bitIndex} inválido.`\n                            );\n                        }\n\n\n                        if (!isObject(bitConfig)) {\n\n                            errors.push(\n                                `Driver ${driverId} / ${variableId}: ` +\n                                `configuración del bit ${bitIndex} inválida.`\n                            );\n\n                            continue;\n                        }\n\n\n                        if (\n                            typeof bitConfig.point !== \"string\" ||\n                            bitConfig.point.trim() === \"\"\n                        ) {\n\n                            errors.push(\n                                `Driver ${driverId} / ${variableId}: ` +\n                                `bit ${bitIndex} sin point.`\n                            );\n                        }\n\n\n                        if (\n                            typeof bitConfig.name !== \"string\" ||\n                            bitConfig.name.trim() === \"\"\n                        ) {\n\n                            errors.push(\n                                `Driver ${driverId} / ${variableId}: ` +\n                                `bit ${bitIndex} sin name.`\n                            );\n                        }\n                    }\n                }\n            }\n        }\n    }\n}\n\n\n// ======================================================\n// ACTUALIZAR STARTUP STATE\n// ======================================================\n\nlet state =\n    global.get(\"startupState\") || {};\n\n\nstate.validation = {\n\n    ok: errors.length === 0,\n\n    errors: errors,\n\n    warnings: warnings\n\n};\n\n\nglobal.set(\n    \"startupState\",\n    state\n);\n\n\n// ======================================================\n// RESULTADO\n// ======================================================\n\nif (errors.length > 0) {\n\n    node.status({\n\n        fill: \"red\",\n\n        shape: \"ring\",\n\n        text: errors.length + \" errores\"\n\n    });\n\n\n    msg.payload = {\n\n        status: \"FAULT\",\n\n        stage: \"VALIDATION\",\n\n        errors: errors,\n\n        warnings: warnings\n\n    };\n\n\n    return [\n        null,\n        msg\n    ];\n}\n\n\n// ------------------------------------------------------\n// VALIDACIÓN CORRECTA\n// ------------------------------------------------------\n\nnode.status({\n\n    fill: \"green\",\n\n    shape: \"dot\",\n\n    text: \"CONFIG OK\"\n\n});\n\n\nmsg.validation = {\n\n    ok: true,\n\n    warnings: warnings\n\n};\n\n\nreturn [\n    msg,\n    null\n];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 520,
+        "wires": [
+            [
+                "f82a41e075ee70b1"
+            ],
+            [
+                "935cbaa9db74671d"
+            ]
+        ]
+    },
+    {
+        "id": "935cbaa9db74671d",
+        "type": "function",
+        "z": "548bfb93b2adf834",
+        "name": "Startup Fault",
+        "func": "// ======================================================\n// STARTUP FAULT\n// ======================================================\n//\n// Este nodo procesa los errores del Startup.\n//\n// También recibe el estado READY desde System State\n// únicamente para limpiar su indicador visual anterior.\n//\n// IMPORTANTE:\n// Solo un mensaje con payload.status === \"FAULT\"\n// puede generar una falla.\n// ======================================================\n\n\n// ======================================================\n// 1. SISTEMA RECUPERADO / READY\n// ======================================================\n//\n// System State envía:\n//\n// msg.payload.status = \"READY\"\n//\n// En este caso NO procesamos ninguna falla.\n// Solamente limpiamos el indicador visual del nodo.\n// ======================================================\n\nif (\n    msg.payload &&\n    msg.payload.status === \"READY\"\n) {\n\n    node.status({});\n\n    return null;\n}\n\n\n// ======================================================\n// 2. IGNORAR MENSAJES QUE NO SEAN FAULT\n// ======================================================\n\nif (\n    !msg.payload ||\n    msg.payload.status !== \"FAULT\"\n) {\n\n    return null;\n}\n\n\n// ======================================================\n// 3. PROCESAR FAULT\n// ======================================================\n\nglobal.set(\n    \"systemReady\",\n    false\n);\n\n\nlet state =\n    global.get(\"startupState\") || {};\n\n\nconst errors =\n    Array.isArray(msg.payload.errors)\n        ? msg.payload.errors\n        : [\"Error de Startup no especificado.\"];\n\n\nstate.status =\n    \"FAULT\";\n\n\nstate.failedAt =\n    new Date().toISOString();\n\n\nstate.errors =\n    errors;\n\n\nglobal.set(\n    \"startupState\",\n    state\n);\n\n\n// ------------------------------------------------------\n// ESTADO VISUAL\n// ------------------------------------------------------\n\nnode.status({\n\n    fill: \"red\",\n\n    shape: \"ring\",\n\n    text: \"BMS FAULT\"\n\n});\n\n\nconst stage =\n    msg.payload.stage || \"UNKNOWN\";\n\n\nnode.error(\n    `[BMS STARTUP FAULT] ${stage}: ` +\n    errors.join(\" | \")\n);\n\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 870,
+        "y": 520,
+        "wires": [
+            [
+                "9fc11f478fd64cf5",
+                "f82a41e075ee70b1"
+            ]
+        ]
+    },
+    {
+        "id": "9fc11f478fd64cf5",
+        "type": "debug",
+        "z": "548bfb93b2adf834",
+        "name": "Startup Fault",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1130,
+        "y": 520,
         "wires": []
     },
     {
@@ -440,7 +561,7 @@
         "links": [
             "a9e918440f9b583d"
         ],
-        "x": 845,
+        "x": 1065,
         "y": 160,
         "wires": []
     },
@@ -448,7 +569,7 @@
         "id": "80f8f29e655e0255",
         "type": "inject",
         "z": "091af37d2933f7aa",
-        "name": "",
+        "name": "Scheduler Tick 1s",
         "props": [
             {
                 "p": "payload"
@@ -460,7 +581,7 @@
         ],
         "repeat": "1",
         "crontab": "",
-        "once": true,
+        "once": false,
         "onceDelay": "2",
         "topic": "",
         "payload": "",
@@ -469,7 +590,7 @@
         "y": 160,
         "wires": [
             [
-                "0aed70eab8660dd4"
+                "ab2955d60fb129ea"
             ]
         ]
     },
@@ -478,14 +599,14 @@
         "type": "function",
         "z": "091af37d2933f7aa",
         "name": "Load Devices",
-        "func": "// 1. Obtenemos el objeto con todos los dispositivos desde la memoria global\nconst devices = global.get(\"devices\");\n\n// 2. Control de seguridad por si la memoria está vacía\nif (!devices) {\n    node.status({ fill: \"red\", shape: \"ring\", text: \"Sin datos en memoria\" });\n    return null;\n}\n\n// 3. Extraemos TODOS los nombres de los objetos principales\n// Si tu JSON es {\"BC2\": {...}, \"BC1\": {...}}, esto devolverá [\"BC2\", \"BC1\"]\nconst allDeviceNames = Object.keys(devices);\n\n// 4. Guardamos la lista en el payload para enviarla al siguiente nodo\nmsg.payload = allDeviceNames;\n\n// 5. Mostramos en el nodo cuántos nombres encontramos\nnode.status({ \n    fill: \"green\", \n    shape: \"dot\", \n    text: \"Extraídos \" + allDeviceNames.length + \" nombres\" \n});\n\nreturn msg;\n",
+        "func": "// ======================================================\n// LOAD DEVICES\n// ======================================================\n\n// Protección adicional.\n//\n// Aunque alguien conecte accidentalmente otro nodo\n// directamente a Load Devices, no permitimos scans\n// mientras el sistema no esté READY.\n\nif (\n    global.get(\"systemReady\") !== true\n) {\n\n    node.status({\n\n        fill: \"yellow\",\n\n        shape: \"ring\",\n\n        text: \"SYSTEM NOT READY\"\n\n    });\n\n    return null;\n}\n\n\n// ------------------------------------------------------\n// CARGAR DEVICES\n// ------------------------------------------------------\n\nconst devices =\n    global.get(\"devices\");\n\n\nif (\n    !devices ||\n    typeof devices !== \"object\"\n) {\n\n    node.status({\n\n        fill: \"red\",\n\n        shape: \"ring\",\n\n        text: \"Sin devices\"\n\n    });\n\n    return null;\n}\n\n\n// ------------------------------------------------------\n// LISTA DE DISPOSITIVOS\n// ------------------------------------------------------\n\nconst allDeviceNames =\n    Object.keys(devices);\n\n\nif (allDeviceNames.length === 0) {\n\n    node.status({\n\n        fill: \"red\",\n\n        shape: \"ring\",\n\n        text: \"0 devices\"\n\n    });\n\n    return null;\n}\n\n\nmsg.payload =\n    allDeviceNames;\n\n\nnode.status({\n\n    fill: \"green\",\n\n    shape: \"dot\",\n\n    text:\n        allDeviceNames.length +\n        \" devices\"\n\n});\n\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 340,
+        "x": 520,
         "y": 160,
         "wires": [
             [
@@ -506,7 +627,7 @@
         "stream": false,
         "addname": "",
         "property": "payload",
-        "x": 530,
+        "x": 710,
         "y": 160,
         "wires": [
             [
@@ -527,7 +648,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 700,
+        "x": 900,
         "y": 160,
         "wires": [
             [
@@ -566,8 +687,8 @@
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
-        "x": 920,
-        "y": 280,
+        "x": 900,
+        "y": 320,
         "wires": []
     },
     {
@@ -584,8 +705,28 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 700,
-        "y": 300,
+        "y": 320,
         "wires": []
+    },
+    {
+        "id": "ab2955d60fb129ea",
+        "type": "function",
+        "z": "091af37d2933f7aa",
+        "name": "Scheduler Gate",
+        "func": "// ======================================================\n// SCHEDULER GATE\n// ======================================================\n//\n// El reloj puede funcionar siempre.\n// La adquisición solamente puede pasar cuando\n// el BMS se encuentra realmente READY.\n// ======================================================\n\nconst systemReady =\n    global.get(\"systemReady\") === true;\n\n\nconst startupState =\n    global.get(\"startupState\");\n\n\nif (\n    !systemReady ||\n    !startupState ||\n    startupState.status !== \"READY\"\n) {\n\n    node.status({\n\n        fill: \"yellow\",\n\n        shape: \"ring\",\n\n        text: \"WAITING READY\"\n\n    });\n\n    return null;\n}\n\n\n// ------------------------------------------------------\n// SISTEMA HABILITADO\n// ------------------------------------------------------\n\nnode.status({\n\n    fill: \"green\",\n\n    shape: \"dot\",\n\n    text: \"RUNNING\"\n\n});\n\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 160,
+        "wires": [
+            [
+                "0aed70eab8660dd4"
+            ]
+        ]
     },
     {
         "id": "ae86e0fde51d877a",
