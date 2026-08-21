@@ -35,13 +35,16 @@
   },
 
 
-
-    "AIRMED": {
-        "name": "Central Gases Médicinales",
-        "gateway": "HAIWELL",
-        "driver": "HAIWELL_H32S0R",
-        "slave": 1
-    },
+   "AIRMED": {
+      "name": "Central Gases Médicinales",
+      "gateway": "HAIWELL",
+      "driver": "HAIWELL_H32S0R",
+      "slave": 1,
+      "health": {
+        "heartbeatPoint": "HeartBitCounter",
+        "heartbeatTimeoutMs": 10000
+	 }
+   },
 
   "TANKS": {
     "name": "Sala de Tanques",

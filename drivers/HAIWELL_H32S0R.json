@@ -598,6 +598,20 @@
       "scan": 1000,
       "read": false,
       "write": true
-    }
+    },
+     "HeartBitCounter": {
+  	"name": "Heartbeat PLC",
+	 "fc": 3,
+  	"address": 16483,
+  	"quantity": 1,
+  	"type": "uint16",
+  	"multiplier": 1,
+  	"swap": false,
+  	"unit": "",
+  	"decimals": 0,
+  	"scan": 1000,
+  	"read": true,
+  	"write": false
+	}
   }
 }

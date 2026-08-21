@@ -40,6 +40,14 @@
         "env": []
     },
     {
+        "id": "bb2d202595e1d1a4",
+        "type": "tab",
+        "label": "35 - Health Engine",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
         "id": "ae56baca30656258",
         "type": "tab",
         "label": "40 - MQTT Publisher",
@@ -937,7 +945,8 @@
         "wires": [
             [
                 "15574647789b274f",
-                "a722ed695c931af6"
+                "a722ed695c931af6",
+                "71d5dfebef7ce9ae"
             ],
             []
         ]
@@ -947,14 +956,14 @@
         "type": "function",
         "z": "291f91c97ecd24c1",
         "name": "Buid Measurement",
-        "func": "const deviceId = msg.device.id;\n\nif (!deviceId) {\n    node.error(\"No existe device.id\");\n    return null;\n}\n\n// Cache de medidas del dispositivo (guarda el histórico en memoria)\nlet cache = flow.get(\"measurements\") || {};\n\nif (!cache[deviceId]) {\n    cache[deviceId] = {};\n}\n\n// Actualizar únicamente la variable recibida en este instante\ncache[deviceId][msg.point] = {\n    name: msg.variable.name,\n    value: msg.payload.value,\n    unit: msg.variable.unit,\n    timestamp: new Date().toISOString()\n};\n\nflow.set(\"measurements\", cache);\n\n// Publicar inmediatamente un payload plano con la variable actual\nmsg.payload = {\n    deviceId: deviceId,\n    deviceName: msg.device.name,\n    gateway: msg.device.gateway.id,\n    driver: msg.device.driver.id,\n    point: msg.point,\n    measurement: cache[deviceId][msg.point]\n};\n\nreturn msg;\n",
+        "func": "// ======================================================\n// BUILD MEASUREMENT\n// ======================================================\n\nconst deviceId =\n    msg.device.id;\n\n\nif (!deviceId) {\n\n    node.error(\n        \"No existe device.id\"\n    );\n\n    return null;\n}\n\n\n// ======================================================\n// QUALITY DE LA MUESTRA\n// ======================================================\n//\n// Esta quality representa el estado del device EN EL\n// MOMENTO en que recibimos esta medición.\n//\n// La quality dinámica actual será publicada aparte por\n// el Health Engine.\n// ======================================================\n\nconst health =\n    global.get(\"health\") || {};\n\n\nconst deviceHealth =\n    health.devices?.[deviceId];\n\n\nconst validQualities =\n    new Set([\n        \"GOOD\",\n        \"BAD\",\n        \"STALE\",\n        \"OFFLINE\",\n        \"UNKNOWN\"\n    ]);\n\n\nlet quality =\n    \"UNKNOWN\";\n\n\nif (\n    deviceHealth &&\n    validQualities.has(\n        deviceHealth.status\n    )\n) {\n\n    quality =\n        deviceHealth.status;\n}\n\n\n// ======================================================\n// CACHE DE MEDICIONES\n// ======================================================\n\nlet cache =\n    flow.get(\"measurements\") || {};\n\n\nif (!cache[deviceId]) {\n\n    cache[deviceId] = {};\n}\n\n\n// ======================================================\n// ACTUALIZAR PUNTO\n// ======================================================\n\ncache[deviceId][msg.point] = {\n\n    name:\n        msg.variable.name,\n\n    value:\n        msg.payload.value,\n\n    unit:\n        msg.variable.unit,\n\n    quality:\n        quality,\n\n    timestamp:\n        new Date().toISOString()\n};\n\n\nflow.set(\n    \"measurements\",\n    cache\n);\n\n\n// ======================================================\n// PAYLOAD DE SALIDA\n// ======================================================\n\nmsg.payload = {\n\n    deviceId:\n        deviceId,\n\n    deviceName:\n        msg.device.name,\n\n    gateway:\n        msg.device.gateway.id,\n\n    driver:\n        msg.device.driver.id,\n\n    point:\n        msg.point,\n\n    measurement:\n        cache[deviceId][msg.point]\n\n};\n\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 790,
+        "x": 970,
         "y": 340,
         "wires": [
             [
@@ -1008,7 +1017,7 @@
         "links": [
             "173c9315cf6a3d0e"
         ],
-        "x": 925,
+        "x": 1105,
         "y": 340,
         "wires": []
     },
@@ -1025,8 +1034,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 460,
-        "y": 460,
+        "x": 320,
+        "y": 520,
         "wires": []
     },
     {
@@ -1137,7 +1146,8 @@
         "wires": [
             [
                 "a722ed695c931af6",
-                "76bdad645dc61b4a"
+                "76bdad645dc61b4a",
+                "71d5dfebef7ce9ae"
             ],
             []
         ]
@@ -1154,13 +1164,14 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 520,
+        "x": 700,
         "y": 340,
         "wires": [
             [
                 "23d8ed7fe8b8e56c",
                 "f5aad37c0bb57b88",
-                "61a49460c5c82be4"
+                "61a49460c5c82be4",
+                "715267912e16bdb5"
             ]
         ]
     },
@@ -1194,7 +1205,7 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 760,
+        "x": 960,
         "y": 260,
         "wires": []
     },
@@ -1207,8 +1218,217 @@
         "links": [
             "ea9ea0d016079e1c"
         ],
-        "x": 725,
+        "x": 925,
         "y": 420,
+        "wires": []
+    },
+    {
+        "id": "71d5dfebef7ce9ae",
+        "type": "function",
+        "z": "291f91c97ecd24c1",
+        "name": "Mark Communication OK",
+        "func": "// ======================================================\n// MARK COMMUNICATION OK\n// ======================================================\n//\n// RESPONSABILIDAD:\n//\n// Una respuesta Modbus válida constituye evidencia de\n// que pudimos comunicarnos con el DEVICE.\n//\n// Este nodo:\n//\n// - actualiza lastSeen del device\n// - registra por qué gateway llegó la respuesta\n// - inicializa su estructura de Health\n//\n// NO:\n// - decide STALE\n// - decide OFFLINE\n// - evalúa heartbeat\n// - modifica el payload de adquisición\n//\n// Esas responsabilidades pertenecen al Health Watchdog\n// y al Heartbeat Observer.\n// ======================================================\n\n\n// ------------------------------------------------------\n// VALIDAR CONTEXTO\n// ------------------------------------------------------\n\nif (\n    !msg.device ||\n    !msg.device.id\n) {\n\n    node.warn(\n        \"Mark Communication OK: falta msg.device.id\"\n    );\n\n    return msg;\n}\n\n\nif (\n    !msg.device.gateway ||\n    !msg.device.gateway.id\n) {\n\n    node.warn(\n        `Mark Communication OK: ${msg.device.id} sin gateway`\n    );\n\n    return msg;\n}\n\n\n// ------------------------------------------------------\n// IDENTIFICACIÓN\n// ------------------------------------------------------\n\nconst deviceId =\n    msg.device.id;\n\nconst gatewayId =\n    msg.device.gateway.id;\n\nconst now =\n    Date.now();\n\nconst nowIso =\n    new Date(now).toISOString();\n\n\n// ======================================================\n// OBTENER HEALTH GLOBAL\n// ======================================================\n\nlet health =\n    global.get(\"health\") || {};\n\n\nif (\n    !health.devices ||\n    typeof health.devices !== \"object\"\n) {\n\n    health.devices = {};\n}\n\n\nif (\n    !health.gateways ||\n    typeof health.gateways !== \"object\"\n) {\n\n    health.gateways = {};\n}\n\n\n// ======================================================\n// DEVICE HEALTH\n// ======================================================\n\nlet deviceHealth =\n    health.devices[deviceId] || {\n\n        id: deviceId,\n\n        name:\n            msg.device.name || deviceId,\n\n        gateway:\n            gatewayId,\n\n        driver:\n            msg.device.driver?.id || null,\n\n        status:\n            \"UNKNOWN\",\n\n        communication: {},\n\n        application: {}\n    };\n\n\n// Actualizamos metadata por si la configuración fue\n// recargada.\n\ndeviceHealth.name =\n    msg.device.name || deviceId;\n\ndeviceHealth.gateway =\n    gatewayId;\n\ndeviceHealth.driver =\n    msg.device.driver?.id || null;\n\n\n// ------------------------------------------------------\n// COMMUNICATION\n// ------------------------------------------------------\n\ndeviceHealth.communication = {\n\n    ...deviceHealth.communication,\n\n    status:\n        \"GOOD\",\n\n    lastSeen:\n        now,\n\n    lastSeenIso:\n        nowIso\n};\n\n\n// ======================================================\n// CONFIGURACIÓN DE HEARTBEAT\n// ======================================================\n//\n// El heartbeat es OPCIONAL.\n//\n// Si devices.json contiene:\n//\n// \"health\": {\n//     \"heartbeatPoint\": \"HeartBitCounter\",\n//     \"heartbeatTimeoutMs\": 5000\n// }\n//\n// application.enabled será true.\n//\n// Si no existe esa configuración:\n//\n// application.enabled será false.\n//\n// Por eso SCU200, medidores ABB y futuros devices sin\n// heartbeat funcionan perfectamente.\n// ======================================================\n\nconst heartbeatPoint =\n    msg.device.health?.heartbeatPoint;\n\n\nconst heartbeatEnabled =\n    (\n        typeof heartbeatPoint === \"string\" &&\n        heartbeatPoint.trim() !== \"\"\n    );\n\n\nconst configuredTimeout =\n    Number(\n        msg.device.health?.heartbeatTimeoutMs\n    );\n\n\nconst heartbeatTimeoutMs =\n    (\n        Number.isFinite(configuredTimeout) &&\n        configuredTimeout > 0\n    )\n        ? configuredTimeout\n        : 5000;\n\n\ndeviceHealth.application = {\n\n    ...deviceHealth.application,\n\n    enabled:\n        heartbeatEnabled,\n\n    heartbeatPoint:\n        heartbeatEnabled\n            ? heartbeatPoint\n            : null,\n\n    timeoutMs:\n        heartbeatTimeoutMs\n};\n\n\n// ------------------------------------------------------\n// DEVICE SIN HEARTBEAT\n// ------------------------------------------------------\n//\n// Si tiene comunicación y no existe monitor de\n// aplicación, el device puede considerarse GOOD.\n//\n// Para devices con heartbeat dejamos que el Observer\n// determine la aplicación.\n// ------------------------------------------------------\n\nif (!heartbeatEnabled) {\n\n    deviceHealth.status =\n        \"GOOD\";\n}\n\n\n// ======================================================\n// GUARDAR DEVICE\n// ======================================================\n\nhealth.devices[deviceId] =\n    deviceHealth;\n\n\n// ======================================================\n// GATEWAY\n// ======================================================\n//\n// IMPORTANTE:\n//\n// Una respuesta de cualquier device a través de un\n// gateway demuestra que el CAMINO de comunicación\n// a través de ese gateway funcionó.\n//\n// En SCU200 esto NO permite distinguir todavía entre:\n//\n// - SCU200 caído\n// - todos los slaves downstream caídos\n//\n// Por lo tanto esta información debe interpretarse como\n// \"última comunicación válida a través del gateway\",\n// no todavía como diagnóstico físico definitivo.\n// ======================================================\n\nlet gatewayHealth =\n    health.gateways[gatewayId] || {\n\n        id:\n            gatewayId,\n\n        status:\n            \"UNKNOWN\",\n\n        lastSeen:\n            null,\n\n        lastSeenIso:\n            null\n    };\n\n\ngatewayHealth.status =\n    \"GOOD\";\n\ngatewayHealth.lastSeen =\n    now;\n\ngatewayHealth.lastSeenIso =\n    nowIso;\n\n\nhealth.gateways[gatewayId] =\n    gatewayHealth;\n\n\n// ======================================================\n// TIMESTAMP GLOBAL\n// ======================================================\n\nhealth.updatedAt =\n    nowIso;\n\n\n// ======================================================\n// GUARDAR\n// ======================================================\n\nglobal.set(\n    \"health\",\n    health\n);\n\n\n// ------------------------------------------------------\n// STATUS VISUAL\n// ------------------------------------------------------\n\nnode.status({\n\n    fill: \"green\",\n\n    shape: \"dot\",\n\n    text:\n        `${gatewayId} / ${deviceId}`\n});\n\n\n// ------------------------------------------------------\n// MUY IMPORTANTE:\n//\n// El mensaje continúa SIN MODIFICACIONES hacia Decode.\n// ------------------------------------------------------\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 670,
+        "y": 480,
+        "wires": [
+            [
+                "a722ed695c931af6"
+            ]
+        ]
+    },
+    {
+        "id": "715267912e16bdb5",
+        "type": "link out",
+        "z": "291f91c97ecd24c1",
+        "name": "Health Messurements",
+        "mode": "link",
+        "links": [
+            "08617b3cc61cf39f"
+        ],
+        "x": 925,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "08617b3cc61cf39f",
+        "type": "link in",
+        "z": "bb2d202595e1d1a4",
+        "name": "Health Messurements",
+        "links": [
+            "715267912e16bdb5"
+        ],
+        "x": 105,
+        "y": 100,
+        "wires": [
+            [
+                "03cede65067e2620"
+            ]
+        ]
+    },
+    {
+        "id": "03cede65067e2620",
+        "type": "function",
+        "z": "bb2d202595e1d1a4",
+        "name": "Heart Observer",
+        "func": "// ======================================================\n// HEARTBEAT OBSERVER\n// ======================================================\n//\n// RESPONSABILIDAD:\n//\n// Observar ÚNICAMENTE los devices que tienen un\n// heartbeat configurado.\n//\n// Para esos devices:\n//\n// - detecta el valor actual\n// - recuerda el valor anterior\n// - registra cuándo cambió por última vez\n//\n// NO determina OFFLINE.\n// Eso pertenece a Communication / Watchdog.\n// ======================================================\n\n\n// ------------------------------------------------------\n// VALIDAR DEVICE\n// ------------------------------------------------------\n\nif (\n    !msg.device ||\n    !msg.device.id\n) {\n\n    return null;\n}\n\n\nconst deviceId =\n    msg.device.id;\n\n\n// ======================================================\n// ¿EL DEVICE TIENE HEARTBEAT?\n// ======================================================\n\nconst heartbeatPoint =\n    msg.device.health?.heartbeatPoint;\n\n\nif (\n    typeof heartbeatPoint !== \"string\" ||\n    heartbeatPoint.trim() === \"\"\n) {\n\n    // Device sin heartbeat.\n    //\n    // Esto NO es un error.\n    //\n    // SCU200, ABB y futuros equipos pueden entrar\n    // perfectamente por este camino.\n\n    return null;\n}\n\n\n// ======================================================\n// ¿ESTE MENSAJE ES EL HEARTBEAT?\n// ======================================================\n\nif (\n    msg.point !== heartbeatPoint\n) {\n\n    return null;\n}\n\n\n// ======================================================\n// VALOR DECODIFICADO\n// ======================================================\n\nconst value =\n    msg.payload?.value;\n\n\nif (\n    value === undefined ||\n    value === null\n) {\n\n    node.warn(\n        `Heartbeat ${deviceId}: valor inválido`\n    );\n\n    return null;\n}\n\n\nconst now =\n    Date.now();\n\nconst nowIso =\n    new Date(now).toISOString();\n\n\n// ======================================================\n// HEALTH\n// ======================================================\n\nlet health =\n    global.get(\"health\") || {};\n\n\nhealth.devices =\n    health.devices || {};\n\n\nlet deviceHealth =\n    health.devices[deviceId];\n\n\nif (!deviceHealth) {\n\n    node.warn(\n        `Heartbeat ${deviceId}: ` +\n        `device todavía no existe en global.health`\n    );\n\n    return null;\n}\n\n\nlet application =\n    deviceHealth.application || {};\n\n\napplication.enabled =\n    true;\n\napplication.heartbeatPoint =\n    heartbeatPoint;\n\n\n// ------------------------------------------------------\n// REGISTRAMOS QUE PUDIMOS LEER EL HEARTBEAT\n// ------------------------------------------------------\n\napplication.lastSeen =\n    now;\n\napplication.lastSeenIso =\n    nowIso;\n\n\n// ======================================================\n// PRIMERA LECTURA\n// ======================================================\n\nif (\n    application.lastValue === undefined\n) {\n\n    application.lastValue =\n        value;\n\n    application.lastChange =\n        now;\n\n    application.lastChangeIso =\n        nowIso;\n\n    application.status =\n        \"GOOD\";\n\n\n    deviceHealth.application =\n        application;\n\n\n    if (\n        deviceHealth.communication?.status === \"GOOD\"\n    ) {\n\n        deviceHealth.status =\n            \"GOOD\";\n    }\n\n\n    health.devices[deviceId] =\n        deviceHealth;\n\n\n    health.updatedAt =\n        nowIso;\n\n\n    global.set(\n        \"health\",\n        health\n    );\n\n\n    node.status({\n\n        fill: \"green\",\n\n        shape: \"dot\",\n\n        text:\n            `${deviceId}: HB ${value}`\n    });\n\n\n    return null;\n}\n\n\n// ======================================================\n// COMPARAR CON EL VALOR ANTERIOR\n// ======================================================\n\nif (\n    value !== application.lastValue\n) {\n\n    // --------------------------------------------------\n    // CAMBIÓ\n    // --------------------------------------------------\n\n    application.lastValue =\n        value;\n\n    application.lastChange =\n        now;\n\n    application.lastChangeIso =\n        nowIso;\n\n    application.status =\n        \"GOOD\";\n\n\n    if (\n        deviceHealth.communication?.status === \"GOOD\"\n    ) {\n\n        deviceHealth.status =\n            \"GOOD\";\n    }\n}\n\n\n// ======================================================\n// SI NO CAMBIÓ\n// ======================================================\n//\n// NO declaramos BAD aquí.\n//\n// Simplemente NO actualizamos lastChange.\n//\n// El Watchdog medirá:\n// now - lastChange\n//\n// y decidirá cuándo realmente está congelado.\n// ======================================================\n\n\n// ======================================================\n// GUARDAR\n// ======================================================\n\ndeviceHealth.application =\n    application;\n\n\nhealth.devices[deviceId] =\n    deviceHealth;\n\n\nhealth.updatedAt =\n    nowIso;\n\n\nglobal.set(\n    \"health\",\n    health\n);\n\n\n// ======================================================\n// STATUS\n// ======================================================\n\nnode.status({\n\n    fill: \"green\",\n\n    shape: \"dot\",\n\n    text:\n        `${deviceId}: HB ${value}`\n});\n\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 300,
+        "y": 100,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "3c7f5ddd5b320ca4",
+        "type": "inject",
+        "z": "bb2d202595e1d1a4",
+        "name": "Health Tick 1s",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "2",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 280,
+        "y": 220,
+        "wires": [
+            [
+                "cabe21f4582ba37f"
+            ]
+        ]
+    },
+    {
+        "id": "cabe21f4582ba37f",
+        "type": "function",
+        "z": "bb2d202595e1d1a4",
+        "name": "Health Watchdog",
+        "func": "// ======================================================\n// HEALTH WATCHDOG\n// ======================================================\n//\n// Supervisa TODOS los devices y gateways configurados,\n// hayan comunicado alguna vez o no.\n//\n// DEVICE COMMUNICATION:\n//\n// UNKNOWN\n// GOOD\n// STALE\n// OFFLINE\n//\n// APPLICATION:\n//\n// UNKNOWN\n// GOOD\n// BAD\n// NOT_MONITORED\n//\n// DEVICE GLOBAL:\n//\n// OFFLINE > STALE > BAD > UNKNOWN > GOOD\n//\n// Además genera un snapshot para el MQTT Health\n// Publisher.\n// ======================================================\n\n\nconst now =\n    Date.now();\n\nconst nowIso =\n    new Date(now).toISOString();\n\n\n// ======================================================\n// CONFIGURACIÓN\n// ======================================================\n\nconst configuredDevices =\n    global.get(\"devices\") || {};\n\nconst configuredGateways =\n    global.get(\"gateways\") || {};\n\n\n// ======================================================\n// HEALTH\n// ======================================================\n\nlet health =\n    global.get(\"health\") || {};\n\n\nhealth.devices =\n    health.devices || {};\n\n\nhealth.gateways =\n    health.gateways || {};\n\n\n// ======================================================\n// 1. INICIALIZAR TODOS LOS GATEWAYS CONFIGURADOS\n// ======================================================\n\nfor (\n    const gatewayId\n    of Object.keys(configuredGateways)\n) {\n\n    let gateway =\n        health.gateways[gatewayId];\n\n\n    if (!gateway) {\n\n        gateway = {\n\n            id:\n                gatewayId,\n\n            status:\n                \"UNKNOWN\",\n\n            lastSeen:\n                null,\n\n            lastSeenIso:\n                null,\n\n            monitoringSince:\n                now,\n\n            monitoringSinceIso:\n                nowIso\n\n        };\n    }\n\n\n    if (!gateway.monitoringSince) {\n\n        gateway.monitoringSince =\n            now;\n\n        gateway.monitoringSinceIso =\n            nowIso;\n    }\n\n\n    health.gateways[gatewayId] =\n        gateway;\n}\n\n\n// ======================================================\n// 2. INICIALIZAR TODOS LOS DEVICES CONFIGURADOS\n// ======================================================\n\nfor (\n    const [deviceId, deviceConfig]\n    of Object.entries(configuredDevices)\n) {\n\n    let device =\n        health.devices[deviceId];\n\n\n    if (!device) {\n\n        device = {\n\n            id:\n                deviceId,\n\n            name:\n                deviceConfig.name || deviceId,\n\n            gateway:\n                deviceConfig.gateway || null,\n\n            driver:\n                deviceConfig.driver || null,\n\n            status:\n                \"UNKNOWN\",\n\n            monitoringSince:\n                now,\n\n            monitoringSinceIso:\n                nowIso,\n\n            communication: {\n\n                status:\n                    \"UNKNOWN\",\n\n                lastSeen:\n                    null,\n\n                lastSeenIso:\n                    null\n\n            },\n\n            application: {}\n\n        };\n    }\n\n\n    // --------------------------------------------------\n    // ACTUALIZAR METADATA\n    // --------------------------------------------------\n\n    device.name =\n        deviceConfig.name || deviceId;\n\n    device.gateway =\n        deviceConfig.gateway || null;\n\n    device.driver =\n        deviceConfig.driver || null;\n\n\n    if (!device.monitoringSince) {\n\n        device.monitoringSince =\n            now;\n\n        device.monitoringSinceIso =\n            nowIso;\n    }\n\n\n    device.communication =\n        device.communication || {};\n\n\n    // ==================================================\n    // CONFIGURACIÓN HEARTBEAT\n    // ==================================================\n\n    const heartbeatPoint =\n        deviceConfig.health?.heartbeatPoint;\n\n\n    const heartbeatEnabled =\n        (\n            typeof heartbeatPoint === \"string\" &&\n            heartbeatPoint.trim() !== \"\"\n        );\n\n\n    const configuredHeartbeatTimeout =\n        Number(\n            deviceConfig.health?.heartbeatTimeoutMs\n        );\n\n\n    const heartbeatTimeoutMs =\n        (\n            Number.isFinite(\n                configuredHeartbeatTimeout\n            ) &&\n            configuredHeartbeatTimeout > 0\n        )\n            ? configuredHeartbeatTimeout\n            : 5000;\n\n\n    device.application = {\n\n        ...device.application,\n\n        enabled:\n            heartbeatEnabled,\n\n        heartbeatPoint:\n            heartbeatEnabled\n                ? heartbeatPoint\n                : null,\n\n        timeoutMs:\n            heartbeatTimeoutMs\n\n    };\n\n\n    if (\n        heartbeatEnabled &&\n        !device.application.monitoringSince\n    ) {\n\n        device.application.monitoringSince =\n            now;\n\n        device.application.monitoringSinceIso =\n            nowIso;\n    }\n\n\n    health.devices[deviceId] =\n        device;\n}\n\n\n// ======================================================\n// 3. EVALUAR DEVICES\n// ======================================================\n\nfor (\n    const [deviceId, device]\n    of Object.entries(health.devices)\n) {\n\n    const communication =\n        device.communication || {};\n\n\n    const application =\n        device.application || {};\n\n\n    const deviceConfig =\n        configuredDevices[deviceId] || {};\n\n\n// ======================================================\n// COMMUNICATION TIMEOUTS\n// ======================================================\n\n    const configuredStale =\n        Number(\n            deviceConfig.health?.staleAfterMs\n        );\n\n\n    const configuredOffline =\n        Number(\n            deviceConfig.health?.offlineAfterMs\n        );\n\n\n    const staleAfterMs =\n        (\n            Number.isFinite(configuredStale) &&\n            configuredStale > 0\n        )\n            ? configuredStale\n            : 5000;\n\n\n    const offlineAfterMs =\n        (\n            Number.isFinite(configuredOffline) &&\n            configuredOffline > staleAfterMs\n        )\n            ? configuredOffline\n            : 15000;\n\n\n    communication.staleAfterMs =\n        staleAfterMs;\n\n\n    communication.offlineAfterMs =\n        offlineAfterMs;\n\n\n// ======================================================\n// COMMUNICATION STATUS\n// ======================================================\n\n    if (communication.lastSeen) {\n\n        const age =\n            now -\n            communication.lastSeen;\n\n\n        communication.ageMs =\n            age;\n\n\n        if (\n            age >= offlineAfterMs\n        ) {\n\n            communication.status =\n                \"OFFLINE\";\n\n        } else if (\n            age >= staleAfterMs\n        ) {\n\n            communication.status =\n                \"STALE\";\n\n        } else {\n\n            communication.status =\n                \"GOOD\";\n        }\n\n    } else {\n\n        // ------------------------------------------------\n        // NUNCA RESPONDIÓ\n        // ------------------------------------------------\n\n        const monitoringAge =\n            now -\n            device.monitoringSince;\n\n\n        communication.ageMs =\n            monitoringAge;\n\n\n        if (\n            monitoringAge >= offlineAfterMs\n        ) {\n\n            communication.status =\n                \"OFFLINE\";\n\n        } else if (\n            monitoringAge >= staleAfterMs\n        ) {\n\n            communication.status =\n                \"STALE\";\n\n        } else {\n\n            communication.status =\n                \"UNKNOWN\";\n        }\n    }\n\n\n// ======================================================\n// APPLICATION / HEARTBEAT\n// ======================================================\n\n    if (\n        application.enabled !== true\n    ) {\n\n        // No existe monitor de aplicación.\n\n        application.status =\n            \"NOT_MONIT\";\n\n    } else if (\n        communication.status !== \"GOOD\"\n    ) {\n\n        // Si no tenemos comunicación actual,\n        // no podemos evaluar correctamente la aplicación.\n\n        application.status =\n            \"UNKNOWN\";\n\n    } else {\n\n        const heartbeatTimeoutMs =\n            Number(\n                application.timeoutMs || 5000\n            );\n\n\n        if (\n            application.lastChange\n        ) {\n\n            const heartbeatAge =\n                now -\n                application.lastChange;\n\n\n            application.ageSinceChangeMs =\n                heartbeatAge;\n\n\n            if (\n                heartbeatAge >=\n                heartbeatTimeoutMs\n            ) {\n\n                application.status =\n                    \"BAD\";\n\n            } else {\n\n                application.status =\n                    \"GOOD\";\n            }\n\n        } else {\n\n            // --------------------------------------------\n            // TODAVÍA NUNCA CAMBIÓ EL HEARTBEAT\n            // --------------------------------------------\n\n            const monitoringSince =\n                application.monitoringSince ||\n                device.monitoringSince;\n\n\n            const monitoringAge =\n                now -\n                monitoringSince;\n\n\n            application.ageSinceChangeMs =\n                monitoringAge;\n\n\n            if (\n                monitoringAge >=\n                heartbeatTimeoutMs\n            ) {\n\n                application.status =\n                    \"BAD\";\n\n            } else {\n\n                application.status =\n                    \"UNKNOWN\";\n            }\n        }\n    }\n\n\n// ======================================================\n// ESTADO GLOBAL DEVICE\n// ======================================================\n//\n// PRIORIDADES:\n//\n// 1 OFFLINE\n// 2 STALE\n// 3 BAD\n// 4 UNKNOWN\n// 5 GOOD\n// ======================================================\n\n    if (\n        communication.status === \"OFFLINE\"\n    ) {\n\n        device.status =\n            \"OFFLINE\";\n\n    } else if (\n        communication.status === \"STALE\"\n    ) {\n\n        device.status =\n            \"STALE\";\n\n    } else if (\n        communication.status === \"UNKNOWN\"\n    ) {\n\n        device.status =\n            \"UNKNOWN\";\n\n    } else if (\n        application.enabled === true &&\n        application.status === \"BAD\"\n    ) {\n\n        device.status =\n            \"BAD\";\n\n    } else if (\n        application.enabled === true &&\n        application.status === \"UNKNOWN\"\n    ) {\n\n        device.status =\n            \"UNKNOWN\";\n\n    } else {\n\n        device.status =\n            \"GOOD\";\n    }\n\n\n    device.communication =\n        communication;\n\n\n    device.application =\n        application;\n\n\n    health.devices[deviceId] =\n        device;\n}\n\n\n// ======================================================\n// 4. EVALUAR GATEWAYS\n// ======================================================\n\nfor (\n    const [gatewayId, gateway]\n    of Object.entries(health.gateways)\n) {\n\n    const gatewayConfig =\n        configuredGateways[gatewayId] || {};\n\n\n    const configuredStale =\n        Number(\n            gatewayConfig.health?.staleAfterMs\n        );\n\n\n    const configuredOffline =\n        Number(\n            gatewayConfig.health?.offlineAfterMs\n        );\n\n\n    const staleAfterMs =\n        (\n            Number.isFinite(configuredStale) &&\n            configuredStale > 0\n        )\n            ? configuredStale\n            : 5000;\n\n\n    const offlineAfterMs =\n        (\n            Number.isFinite(configuredOffline) &&\n            configuredOffline > staleAfterMs\n        )\n            ? configuredOffline\n            : 15000;\n\n\n    gateway.staleAfterMs =\n        staleAfterMs;\n\n\n    gateway.offlineAfterMs =\n        offlineAfterMs;\n\n\n    let age;\n\n\n    if (gateway.lastSeen) {\n\n        age =\n            now -\n            gateway.lastSeen;\n\n    } else {\n\n        age =\n            now -\n            gateway.monitoringSince;\n    }\n\n\n    gateway.ageMs =\n        age;\n\n\n    if (\n        age >= offlineAfterMs\n    ) {\n\n        gateway.status =\n            \"OFFLINE\";\n\n    } else if (\n        age >= staleAfterMs\n    ) {\n\n        gateway.status =\n            \"STALE\";\n\n    } else if (\n        gateway.lastSeen\n    ) {\n\n        gateway.status =\n            \"GOOD\";\n\n    } else {\n\n        gateway.status =\n            \"UNKNOWN\";\n    }\n\n\n    health.gateways[gatewayId] =\n        gateway;\n}\n\n\n// ======================================================\n// 5. RESUMEN\n// ======================================================\n\nconst allDevices =\n    Object.values(\n        health.devices\n    );\n\n\nconst summary = {\n\n    total:\n        allDevices.length,\n\n    good:\n        allDevices.filter(\n            device =>\n                device.status === \"GOOD\"\n        ).length,\n\n    bad:\n        allDevices.filter(\n            device =>\n                device.status === \"BAD\"\n        ).length,\n\n    stale:\n        allDevices.filter(\n            device =>\n                device.status === \"STALE\"\n        ).length,\n\n    offline:\n        allDevices.filter(\n            device =>\n                device.status === \"OFFLINE\"\n        ).length,\n\n    unknown:\n        allDevices.filter(\n            device =>\n                device.status === \"UNKNOWN\"\n        ).length\n\n};\n\n\nhealth.summary =\n    summary;\n\n\nhealth.updatedAt =\n    nowIso;\n\n\n// ======================================================\n// 6. GUARDAR GLOBAL HEALTH\n// ======================================================\n\nglobal.set(\n    \"health\",\n    health\n);\n\n\n// ======================================================\n// 7. STATUS DEL NODO\n// ======================================================\n\nnode.status({\n\n    fill:\n        (\n            summary.bad === 0 &&\n            summary.stale === 0 &&\n            summary.offline === 0 &&\n            summary.unknown === 0\n        )\n            ? \"green\"\n            : \"yellow\",\n\n    shape:\n        \"dot\",\n\n    text:\n        `G:${summary.good} ` +\n        `B:${summary.bad} ` +\n        `S:${summary.stale} ` +\n        `O:${summary.offline}`\n});\n\n\n// ======================================================\n// 8. SNAPSHOT PARA MQTT PUBLISHER\n// ======================================================\n\nmsg.health =\n    health;\n\n\nmsg.healthSummary =\n    summary;\n\n\nmsg.payload = {\n\n    type:\n        \"healthSnapshot\",\n\n    timestamp:\n        nowIso\n\n};\n\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 510,
+        "y": 220,
+        "wires": [
+            [
+                "2a575828651333f3",
+                "7bcd7de86581531c",
+                "030ac21a9720cc6c"
+            ]
+        ]
+    },
+    {
+        "id": "2a575828651333f3",
+        "type": "function",
+        "z": "bb2d202595e1d1a4",
+        "name": "Health mqtt publisher",
+        "func": "// ======================================================\n// HEALTH MQTT PUBLISHER\n// ======================================================\n//\n// Convierte global.health a topics MQTT simples,\n// ideales para FUXA.\n//\n// Publica únicamente cuando cambia un valor.\n//\n// Los mensajes serán retained.\n//\n// ======================================================\n\n\nconst health =\n    msg.health ||\n    global.get(\"health\") ||\n    {};\n\n\nconst summary =\n    health.summary ||\n    msg.healthSummary ||\n    {};\n\n\nconst startupState =\n    global.get(\"startupState\") || {};\n\n\nconst systemReady =\n    global.get(\"systemReady\") === true;\n\n\n// ======================================================\n// CACHE DE ÚLTIMOS VALORES PUBLICADOS\n// ======================================================\n\nlet published =\n    context.get(\"published\") || {};\n\n\n// ======================================================\n// HELPER\n// ======================================================\n\nfunction publish(\n    topic,\n    payload\n) {\n\n    const serialized =\n        JSON.stringify(payload);\n\n\n    if (\n        published[topic] === serialized\n    ) {\n\n        return;\n    }\n\n\n    published[topic] =\n        serialized;\n\n\n    node.send({\n\n        topic:\n            topic,\n\n        payload:\n            payload,\n\n        qos:\n            0,\n\n        retain:\n            true\n\n    });\n}\n\n\n// ======================================================\n// CÓDIGOS DE ESTADO\n// ======================================================\n//\n// 0 = UNKNOWN\n// 1 = GOOD\n// 2 = BAD\n// 3 = STALE\n// 4 = OFFLINE\n// 5 = NOT_MONITORED\n//\n// Estos códigos son útiles para FUXA,\n// especialmente para colores/animaciones.\n// ======================================================\n\nfunction healthCode(status) {\n\n    switch (status) {\n\n        case \"GOOD\":\n            return 1;\n\n        case \"BAD\":\n            return 2;\n\n        case \"STALE\":\n            return 3;\n\n        case \"OFFLINE\":\n            return 4;\n\n        case \"NOT_MONIT\":\n            return 5;\n\n        case \"UNKNOWN\":\n        default:\n            return 0;\n    }\n}\n\n\n// ======================================================\n// SYSTEM STATUS\n// ======================================================\n\nlet systemStatus =\n    startupState.status || \"UNKNOWN\";\n\n\nif (\n    systemReady === true\n) {\n\n    systemStatus =\n        \"READY\";\n}\n\n\nfunction systemCode(status) {\n\n    switch (status) {\n\n        case \"READY\":\n            return 1;\n\n        case \"LOADING\":\n        case \"VALIDATING\":\n            return 2;\n\n        case \"FAULT\":\n            return 3;\n\n        default:\n            return 0;\n    }\n}\n\n\npublish(\n    \"bms/health/system/status\",\n    systemStatus\n);\n\n\npublish(\n    \"bms/health/system/code\",\n    systemCode(systemStatus)\n);\n\n\n// ======================================================\n// SUMMARY\n// ======================================================\n\npublish(\n    \"bms/health/summary/total\",\n    Number(summary.total || 0)\n);\n\n\npublish(\n    \"bms/health/summary/good\",\n    Number(summary.good || 0)\n);\n\n\npublish(\n    \"bms/health/summary/bad\",\n    Number(summary.bad || 0)\n);\n\n\npublish(\n    \"bms/health/summary/stale\",\n    Number(summary.stale || 0)\n);\n\n\npublish(\n    \"bms/health/summary/offline\",\n    Number(summary.offline || 0)\n);\n\n\npublish(\n    \"bms/health/summary/unknown\",\n    Number(summary.unknown || 0)\n);\n\n\n// ======================================================\n// GATEWAYS\n// ======================================================\n\nfor (\n    const [gatewayId, gateway]\n    of Object.entries(\n        health.gateways || {}\n    )\n) {\n\n    const status =\n        gateway.status || \"UNKNOWN\";\n\n\n    publish(\n        `bms/health/gateways/${gatewayId}/status`,\n        status\n    );\n\n\n    publish(\n        `bms/health/gateways/${gatewayId}/code`,\n        healthCode(status)\n    );\n}\n\n\n// ======================================================\n// DEVICES\n// ======================================================\n\nfor (\n    const [deviceId, device]\n    of Object.entries(\n        health.devices || {}\n    )\n) {\n\n    const deviceStatus =\n        device.status || \"UNKNOWN\";\n\n\n    const communicationStatus =\n        device.communication?.status ||\n        \"UNKNOWN\";\n\n\n    const applicationEnabled =\n        device.application?.enabled === true;\n\n\n    const applicationStatus =\n        applicationEnabled\n\n            ? (\n                device.application?.status ||\n                \"UNKNOWN\"\n            )\n\n            : \"NOT_MONIT\";\n\n\n    // --------------------------------------------------\n    // DEVICE GLOBAL\n    // --------------------------------------------------\n\n    publish(\n        `bms/health/devices/${deviceId}/status`,\n        deviceStatus\n    );\n\n\n    publish(\n        `bms/health/devices/${deviceId}/code`,\n        healthCode(deviceStatus)\n    );\n\n\n    // --------------------------------------------------\n    // COMMUNICATION\n    // --------------------------------------------------\n\n    publish(\n        `bms/health/devices/${deviceId}/communication/status`,\n        communicationStatus\n    );\n\n\n    publish(\n        `bms/health/devices/${deviceId}/communication/code`,\n        healthCode(\n            communicationStatus\n        )\n    );\n\n\n    // --------------------------------------------------\n    // APPLICATION\n    // --------------------------------------------------\n\n    publish(\n        `bms/health/devices/${deviceId}/application/enabled`,\n        applicationEnabled\n            ? 1\n            : 0\n    );\n\n\n    publish(\n        `bms/health/devices/${deviceId}/application/status`,\n        applicationStatus\n    );\n\n\n    publish(\n        `bms/health/devices/${deviceId}/application/code`,\n        healthCode(\n            applicationStatus\n        )\n    );\n}\n\n\n// ======================================================\n// GUARDAR CACHE\n// ======================================================\n\ncontext.set(\n    \"published\",\n    published\n);\n\n\n// ======================================================\n// STATUS\n// ======================================================\n\nnode.status({\n\n    fill:\n        \"green\",\n\n    shape:\n        \"dot\",\n\n    text:\n        \"MQTT Health OK\"\n});\n\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 220,
+        "wires": [
+            [
+                "08e0edf503685df8"
+            ]
+        ]
+    },
+    {
+        "id": "08e0edf503685df8",
+        "type": "mqtt out",
+        "z": "bb2d202595e1d1a4",
+        "name": "MQTT Helath",
+        "topic": "",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "3bb6fb820dd3038d",
+        "x": 980,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "7bcd7de86581531c",
+        "type": "function",
+        "z": "bb2d202595e1d1a4",
+        "name": "Quality mqtt publisher",
+        "func": "// ======================================================\n// QUALITY MQTT PUBLISHER\n// ======================================================\n//\n// Publica la QUALITY ACTUAL de cada punto configurado.\n//\n// La quality deriva del estado global del device.\n//\n// Ejemplo:\n//\n// bms/HAIWELL/AIRMED/MedicalAirTankPressure/quality\n// GOOD\n//\n// bms/HAIWELL/AIRMED/MedicalAirTankPressure/qualityCode\n// 1\n//\n// Solo publica cuando cambia.\n//\n// Mensajes retained.\n// ======================================================\n\n\n// ======================================================\n// CONFIGURACIÓN\n// ======================================================\n\nconst devices =\n    global.get(\"devices\") || {};\n\n\nconst drivers =\n    global.get(\"drivers\") || {};\n\n\nconst health =\n    global.get(\"health\") || {};\n\n\n// ======================================================\n// CACHE DE PUBLICACIÓN\n// ======================================================\n\nlet published =\n    context.get(\"published\") || {};\n\n\n// ======================================================\n// QUALITY CODE\n// ======================================================\n\nfunction qualityCode(status) {\n\n    switch (status) {\n\n        case \"GOOD\":\n            return 1;\n\n        case \"BAD\":\n            return 2;\n\n        case \"STALE\":\n            return 3;\n\n        case \"OFFLINE\":\n            return 4;\n\n        case \"UNKNOWN\":\n        default:\n            return 0;\n    }\n}\n\n\n// ======================================================\n// PUBLICAR SOLO SI CAMBIÓ\n// ======================================================\n\nfunction publish(\n    topic,\n    payload\n) {\n\n    const serialized =\n        JSON.stringify(payload);\n\n\n    if (\n        published[topic] === serialized\n    ) {\n\n        return;\n    }\n\n\n    published[topic] =\n        serialized;\n\n\n    node.send({\n\n        topic:\n            topic,\n\n        payload:\n            payload,\n\n        qos:\n            0,\n\n        retain:\n            true\n    });\n}\n\n\n// ======================================================\n// DEVICES\n// ======================================================\n\nfor (\n    const [deviceId, deviceConfig]\n    of Object.entries(devices)\n) {\n\n    const gatewayId =\n        deviceConfig.gateway;\n\n\n    const driverId =\n        deviceConfig.driver;\n\n\n    const driver =\n        drivers[driverId];\n\n\n    if (\n        !gatewayId ||\n        !driver ||\n        !driver.variables\n    ) {\n\n        continue;\n    }\n\n\n    // --------------------------------------------------\n    // QUALITY DEL DEVICE\n    // --------------------------------------------------\n\n    const deviceHealth =\n        health.devices?.[deviceId];\n\n\n    const quality =\n        deviceHealth?.status ||\n        \"UNKNOWN\";\n\n\n    const code =\n        qualityCode(\n            quality\n        );\n\n\n    // ==================================================\n    // VARIABLES DEL DRIVER\n    // ==================================================\n\n    for (\n        const [variableId, variable]\n        of Object.entries(driver.variables)\n    ) {\n\n        if (\n            !variable ||\n            variable.read !== true\n        ) {\n\n            continue;\n        }\n\n\n        // =================================================\n        // BITMASK\n        // =================================================\n        //\n        // El punto real publicado no es el nombre del\n        // registro base sino cada bitConfig.point.\n        // =================================================\n\n        if (\n            variable.type === \"bitmask\" &&\n            variable.bits &&\n            typeof variable.bits === \"object\"\n        ) {\n\n            for (\n                const bitConfig\n                of Object.values(variable.bits)\n            ) {\n\n                if (\n                    !bitConfig ||\n                    typeof bitConfig.point !== \"string\"\n                ) {\n\n                    continue;\n                }\n\n\n                const pointId =\n                    bitConfig.point;\n\n\n                publish(\n\n                    `bms/${gatewayId}/${deviceId}/${pointId}/quality`,\n\n                    quality\n                );\n\n\n                publish(\n\n                    `bms/${gatewayId}/${deviceId}/${pointId}/qualityCode`,\n\n                    code\n                );\n            }\n\n\n            continue;\n        }\n\n\n        // =================================================\n        // VARIABLE NORMAL\n        // =================================================\n\n        const pointId =\n            variableId;\n\n\n        publish(\n\n            `bms/${gatewayId}/${deviceId}/${pointId}/quality`,\n\n            quality\n        );\n\n\n        publish(\n\n            `bms/${gatewayId}/${deviceId}/${pointId}/qualityCode`,\n\n            code\n        );\n    }\n}\n\n\n// ======================================================\n// GUARDAR CACHE\n// ======================================================\n\ncontext.set(\n    \"published\",\n    published\n);\n\n\n// ======================================================\n// STATUS\n// ======================================================\n\nnode.status({\n\n    fill:\n        \"green\",\n\n    shape:\n        \"dot\",\n\n    text:\n        \"QUALITY MQTT OK\"\n});\n\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 280,
+        "wires": [
+            [
+                "08e0edf503685df8"
+            ]
+        ]
+    },
+    {
+        "id": "030ac21a9720cc6c",
+        "type": "function",
+        "z": "bb2d202595e1d1a4",
+        "name": "Health Alarm Adapter",
+        "func": "// ======================================================\n// HEALTH ALARM ADAPTER\n// ======================================================\n//\n// Convierte estados del Health Engine al formato binario\n// que ya entiende nuestro Alarm Engine.\n//\n// Genera:\n//\n// 1. Alarma de pérdida de comunicación\n// 2. Alarma de aplicación / heartbeat detenido\n//\n// NO administra transiciones.\n//\n// ACTIVE / CLEARED / duración / duplicados siguen siendo\n// responsabilidad del Binary Alarm Engine existente.\n// ======================================================\n\n\nconst health =\n    global.get(\"health\") || {};\n\n\nconst configuredDevices =\n    global.get(\"devices\") || {};\n\n\n// ======================================================\n// HELPER\n// ======================================================\n\nfunction sendAlarmInput({\n\n    deviceId,\n\n    deviceName,\n\n    gatewayId,\n\n    pointId,\n\n    pointName,\n\n    value,\n\n    severity,\n\n    message\n\n}) {\n\n    node.send({\n\n        healthAlarm:\n            true,\n\n        device: {\n\n            id:\n                deviceId,\n\n            name:\n                deviceName,\n\n            gateway:\n                gatewayId\n        },\n\n        point:\n            pointId,\n\n        variable: {\n\n            name:\n                pointName,\n\n            type:\n                \"bool\",\n\n            unit:\n                \"\",\n\n            alarm:\n                true,\n\n            severity:\n                severity,\n\n            message:\n                message\n        },\n\n        payload: {\n\n            value:\n                value\n        }\n\n    });\n}\n\n\n// ======================================================\n// DEVICES\n// ======================================================\n\nfor (\n    const [deviceId, deviceHealth]\n    of Object.entries(\n        health.devices || {}\n    )\n) {\n\n    const deviceConfig =\n        configuredDevices[deviceId] || {};\n\n\n    const deviceName =\n        deviceConfig.name ||\n        deviceHealth.name ||\n        deviceId;\n\n\n    const gatewayId =\n        deviceConfig.gateway ||\n        deviceHealth.gateway ||\n        null;\n\n\n    // ==================================================\n    // 1. ALARMA DE COMUNICACIÓN\n    // ==================================================\n\n    const communicationStatus =\n        deviceHealth.communication?.status ||\n        \"UNKNOWN\";\n\n\n    // Severidad configurable opcionalmente.\n    //\n    // Si no existe configuración:\n    // WARNING.\n\n    const communicationSeverity =\n        deviceConfig.health\n            ?.communicationAlarmSeverity ||\n        \"WARNING\";\n\n\n    // --------------------------------------------------\n    // GOOD\n    // --------------------------------------------------\n\n    if (\n        communicationStatus === \"GOOD\"\n    ) {\n\n        sendAlarmInput({\n\n            deviceId:\n                deviceId,\n\n            deviceName:\n                deviceName,\n\n            gatewayId:\n                gatewayId,\n\n            pointId:\n                \"BMS_Communication\",\n\n            pointName:\n                \"Comunicación BMS\",\n\n            value:\n                0,\n\n            severity:\n                communicationSeverity,\n\n            message:\n                \"Supervisión de comunicación Modbus del equipo.\"\n        });\n    }\n\n\n    // --------------------------------------------------\n    // OFFLINE\n    // --------------------------------------------------\n\n    else if (\n        communicationStatus === \"OFFLINE\"\n    ) {\n\n        sendAlarmInput({\n\n            deviceId:\n                deviceId,\n\n            deviceName:\n                deviceName,\n\n            gatewayId:\n                gatewayId,\n\n            pointId:\n                \"BMS_Communication\",\n\n            pointName:\n                \"Comunicación BMS\",\n\n            value:\n                1,\n\n            severity:\n                communicationSeverity,\n\n            message:\n                \"Supervisión de comunicación Modbus del equipo.\"\n        });\n    }\n\n\n    // --------------------------------------------------\n    // UNKNOWN / STALE\n    // --------------------------------------------------\n    //\n    // No enviamos mensaje.\n    //\n    // STALE degrada Quality pero todavía no activa\n    // notificaciones.\n    //\n    // UNKNOWN no representa ni alarma ni recuperación.\n    // --------------------------------------------------\n\n\n    // ==================================================\n    // 2. ALARMA DE APLICACIÓN / HEARTBEAT\n    // ==================================================\n\n    const application =\n        deviceHealth.application || {};\n\n\n    if (\n        application.enabled !== true\n    ) {\n\n        continue;\n    }\n\n\n    const applicationStatus =\n        application.status ||\n        \"UNKNOWN\";\n\n\n    const applicationSeverity =\n        deviceConfig.health\n            ?.applicationAlarmSeverity ||\n        \"CRITICAL\";\n\n\n    // --------------------------------------------------\n    // GOOD\n    // --------------------------------------------------\n\n    if (\n        applicationStatus === \"GOOD\"\n    ) {\n\n        sendAlarmInput({\n\n            deviceId:\n                deviceId,\n\n            deviceName:\n                deviceName,\n\n            gatewayId:\n                gatewayId,\n\n            pointId:\n                \"BMS_ApplicationHeartbeat\",\n\n            pointName:\n                \"Heartbeat de aplicación\",\n\n            value:\n                0,\n\n            severity:\n                applicationSeverity,\n\n            message:\n                \"Supervisión de ejecución del programa mediante heartbeat.\"\n        });\n    }\n\n\n    // --------------------------------------------------\n    // BAD\n    // --------------------------------------------------\n\n    else if (\n        applicationStatus === \"BAD\"\n    ) {\n\n        sendAlarmInput({\n\n            deviceId:\n                deviceId,\n\n            deviceName:\n                deviceName,\n\n            gatewayId:\n                gatewayId,\n\n            pointId:\n                \"BMS_ApplicationHeartbeat\",\n\n            pointName:\n                \"Heartbeat de aplicación\",\n\n            value:\n                1,\n\n            severity:\n                applicationSeverity,\n\n            message:\n                \"Supervisión de ejecución del programa mediante heartbeat.\"\n        });\n    }\n\n\n    // --------------------------------------------------\n    // UNKNOWN\n    // --------------------------------------------------\n    //\n    // NO mandamos 0.\n    //\n    // UNKNOWN significa \"no puedo determinarlo\".\n    // No significa \"restablecido\".\n    // --------------------------------------------------\n}\n\n\n// ======================================================\n// STATUS\n// ======================================================\n\nnode.status({\n\n    fill:\n        \"green\",\n\n    shape:\n        \"dot\",\n\n    text:\n        \"HEALTH → ALARMS\"\n});\n\n\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 740,
+        "y": 360,
+        "wires": [
+            [
+                "45105e6a4c35072b"
+            ]
+        ]
+    },
+    {
+        "id": "45105e6a4c35072b",
+        "type": "link out",
+        "z": "bb2d202595e1d1a4",
+        "name": "Helath Alarms",
+        "mode": "link",
+        "links": [
+            "ea9ea0d016079e1c"
+        ],
+        "x": 935,
+        "y": 360,
         "wires": []
     },
     {
@@ -1233,7 +1453,7 @@
         "type": "function",
         "z": "ae56baca30656258",
         "name": "MQTT Formatter (new)",
-        "func": "const data = msg.payload;\n\n// Control de seguridad por si el mensaje viene vacío\nif (!data || !data.measurement) {\n    return null;\n}\n\nconst gateway = data.gateway;\nconst deviceId = data.deviceId;\nconst pointName = data.point;      // Ej: VoltageL1\nconst m = data.measurement;        // Datos de la medición\n\n// Enviamos el mensaje individual directo al nodo MQTT Out\nnode.send({\n    _msgid: msg._msgid,\n    topic: `bms/${gateway}/${deviceId}/${pointName}`,\n    payload: m.value, // Envía el número limpio (ej: 220) para FUXA\n    metadata: {\n        gateway,\n        deviceId,\n        point: pointName,\n        name: m.name,\n        unit: m.unit,\n        quality: \"GOOD\",\n        timestamp: m.timestamp\n    }\n});\n\n// Estado visual en el nodo para monitoreo rápido\nnode.status({ \n    fill: \"green\", \n    shape: \"dot\", \n    text: `${pointName}: ${m.value} ${m.unit || ''}` \n});\n\nreturn null;\n",
+        "func": "// ======================================================\n// MQTT FORMATTER\n// ======================================================\n\nconst data =\n    msg.payload;\n\n\n// ------------------------------------------------------\n// VALIDACIÓN\n// ------------------------------------------------------\n\nif (\n    !data ||\n    !data.measurement\n) {\n\n    return null;\n}\n\n\n// ------------------------------------------------------\n// DATOS\n// ------------------------------------------------------\n\nconst gateway =\n    data.gateway;\n\nconst deviceId =\n    data.deviceId;\n\nconst pointName =\n    data.point;\n\nconst m =\n    data.measurement;\n\n\n// ======================================================\n// PUBLICACIÓN DEL VALOR\n// ======================================================\n//\n// IMPORTANTE:\n//\n// Seguimos enviando SOLAMENTE el valor escalar como\n// payload MQTT para mantener compatibilidad con FUXA.\n//\n// La quality dinámica se publica desde Health Engine.\n// ======================================================\n\nnode.send({\n\n    _msgid:\n        msg._msgid,\n\n    topic:\n        `bms/${gateway}/${deviceId}/${pointName}`,\n\n    payload:\n        m.value,\n\n    metadata: {\n\n        gateway:\n            gateway,\n\n        deviceId:\n            deviceId,\n\n        point:\n            pointName,\n\n        name:\n            m.name,\n\n        unit:\n            m.unit,\n\n        quality:\n            m.quality || \"UNKNOWN\",\n\n        timestamp:\n            m.timestamp\n    }\n});\n\n\n// ======================================================\n// STATUS\n// ======================================================\n\nnode.status({\n\n    fill:\n        \"green\",\n\n    shape:\n        \"dot\",\n\n    text:\n        `${pointName}: ${m.value} ${m.unit || \"\"}`\n});\n\n\nreturn null;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -2021,7 +2241,8 @@
         "z": "ee9e20c7532940ba",
         "name": "link in 4",
         "links": [
-            "61a49460c5c82be4"
+            "61a49460c5c82be4",
+            "45105e6a4c35072b"
         ],
         "x": 165,
         "y": 220,
