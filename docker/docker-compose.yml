@@ -2,7 +2,7 @@ services:
 
   nodered:
 
-    image: nodered/node-red:latest
+    image: nodered/node-red:5.0.1
 
     container_name: bms-nodered
 
