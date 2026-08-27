@@ -75,3 +75,10 @@ Desktop.ini
 # macOS
 # -----------------------------
 .DS_Store
+nodered/.npm/
+nodered/.config.nodes.json
+nodered/.config.runtime.json
+nodered/.config.nodes.json.backup
+nodered/.config.runtime.json.backup
+nodered/.config.users.json.backup
+nodered/.flows.json.backup
