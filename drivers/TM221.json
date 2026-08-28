@@ -290,6 +290,51 @@
         "scan": 1000,
         "read": true,
         "write": false
-        }
+        },
+
+      "AlarmMinimumLevel": {
+      "name": "Alarma Nivel Minimo",
+      "fc": 3,
+      "writeFc": 6,
+      "address": 100,
+      "quantity": 1,
+      "type": "uint16",
+      "scan": 1000,
+      "read": true,
+      "write": true,
+      "unit": "cm",
+      "min": 40,
+      "max": 120
+    },
+
+      "FillMaximumLevel": {
+      "name": "Nivel Maximo de Llenado",
+      "fc": 3,
+      "writeFc": 6,
+      "address": 1,
+      "quantity": 1,
+      "type": "uint16",
+      "scan": 1000,
+      "read": true,
+      "write": true,
+      "unit": "cm",
+      "min": 170,
+      "max": 200
+    },
+
+      "FillMinimumLevel": {
+      "name": "Nivel Minimo de Llenado",
+      "fc": 3,
+      "writeFc": 6,
+      "address": 0,
+      "quantity": 1,
+      "type": "uint16",
+      "scan": 1000,
+      "read": true,
+      "write": true,
+      "unit": "cm",
+      "min": 100,
+      "max": 160
+    }
   }
 }

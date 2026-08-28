@@ -558,45 +558,49 @@
 
     "VacuumResetAlarmButton": {
       "name": "Boton reset alarmas vacio",
-      "fc": 5,
+      "writeFc": 5,
+      "fc": 3,
       "address": 3573,
       "quantity": 1,
       "type": "bool",
       "scan": 1000,
-      "read": false,
+      "read": true,
       "write": true
     },
 
     "VacuumMuteAlarmButton": {
       "name": "Boton Silencio alarmas vacio",
-      "fc": 5,
+      "writeFc": 5,
+      "fc": 3,
       "address": 3370,
       "quantity": 1,
       "type": "bool",
       "scan": 1000,
-      "read": false,
+      "read": true,
       "write": true
     },
 
     "CompressorResetAlarmButton": {
       "name": "Boton reset alarmas compresores",
-      "fc": 5,
+      "writeFc": 5,
+      "fc": 3,
       "address": 3572,
       "quantity": 1,
       "type": "bool",
       "scan": 1000,
-      "read": false,
+      "read": true,
       "write": true
     },
 
      "CompressorMuteAlarmButton": {
       "name": "Boton Silencio alarmas compresores",
-      "fc": 5,
+      "fc": 3,
+      "writeFc": 5,
       "address": 3471,
       "quantity": 1,
       "type": "bool",
       "scan": 1000,
-      "read": false,
+      "read": true,
       "write": true
     },
      "HeartBitCounter": {
