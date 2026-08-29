@@ -82,3 +82,9 @@ nodered/.config.nodes.json.backup
 nodered/.config.runtime.json.backup
 nodered/.config.users.json.backup
 nodered/.flows.json.backup
+
+# FUXA runtime / persistent data
+fuxa/appdata/
+fuxa/db/
+fuxa/logs/
+fuxa/images/

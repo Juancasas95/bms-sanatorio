@@ -46,10 +46,14 @@
 	 }
    },
 
-  "TANKS": {
-    "name": "Sala de Tanques",
-    "gateway": "SCHNEIDER",
-    "driver": "TM221",
-    "slave": 1
+   "TANKS": {
+     "name": "Sala de Tanques",
+     "gateway": "SCHNEIDER",
+     "driver": "TM221",
+     "slave": 255,
+     "health": {
+       "heartbeatPoint": "HeartBitCounter",
+       "heartbeatTimeoutMs": 10000
+	}
   }
 }

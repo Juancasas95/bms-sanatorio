@@ -74,6 +74,19 @@
       "write": false
     },
 
+    "FirePressure": {
+      "name": "Presión sistema de incendio",
+      "fc": 3,
+      "address": 15,
+      "quantity": 1,
+      "type": "int16",
+      "multiplier": 1,
+      "unit": "Bar",
+      "decimals": 2,
+      "scan": 1000,
+      "read": true,
+      "write": false
+    },
 
     "AlarmsLevelsBlock": {
       "name": "Bloque de Alarmas Nivel",
@@ -84,21 +97,94 @@
       "scan": 1000,
       "read": true,
       "write": false,
-      "bits": {
-        "0": {"point": "AlarmGeneral", "name": "Alarma General"},
-        "1": {"point": "AlarmLowLevelFire", "name": "Alarma Nivel Bajo Incendio"},
-	"2": {"point": "AlarmLowLevelPress1", "name": "Alarma Nivel Bajo Presurizacion 1"},
-	"3": {"point": "AlarmLowLevelPress2", "name": "Alarma Nivel Bajo Presurizacion 2"},
-        "4": {"point": "AlarmLowLevelElev1", "name": "Alarma Nivel Bajo Elevación 1"},
-        "5": {"point": "AlarmLowLevelElev2", "name": "Alarma Nivel Bajo Elevación 2"},
-        "6": {"point": "AlarmCriticLevelFire", "name": "Alarma Nivel Crítico Incendio"},
-        "7": {"point": "AlarmCriticLevelPress1", "name": "Alarma Nivel Crítico Presurizacion 1"},
-        "8": {"point": "AlarmCriticLevelPress2", "name": "Alarma Nivel Crítico Presurizacion 2"},
-        "9": {"point": "AlarmCriticLevelElev1", "name": "Alarma Nivel Crítico Elevación 1"},
-        "10": {"point": "AlarmCriticLevelElev2", "name": "Alarma Nivel Crítico Elevación 2"},
-        "11": {"point": "AlarmCriticLevelChlorine", "name": "Alarma Nivel Crítico Cloro"}
-      }
-    },
+      "alarm": true,
+
+    "bits": {
+         "0": {
+         "point": "AlarmGeneral",
+         "name": "Alarma general de niveles",
+         "severity": "WARNING",
+         "message": "Alarma general en el sistema de niveles."
+        },
+
+        "1": {
+          "point": "AlarmLowLevelFire",
+          "name": "Nivel bajo - Tanque 1 de incendio",
+          "severity": "WARNING",
+          "message": "El nivel del tanque de incendio se encuentra bajo."
+        },
+
+        "2": {
+          "point": "AlarmLowLevelPress1",
+          "name": "Nivel bajo - Tanque2 - Presurización 1",
+          "severity": "WARNING",
+          "message": "El nivel del tanque 2 de presurización se encuentra bajo."
+        },
+
+        "3": {
+          "point": "AlarmLowLevelPress2",
+          "name": "Nivel bajo - Tanque 3 - Presurización 2",
+          "severity": "WARNING",
+          "message": "El nivel del tanque 3 de presurización se encuentra bajo."
+        },
+
+        "4": {
+          "point": "AlarmLowLevelElev1",
+          "name": "Nivel bajo - Tanque 4 - Elevación 1",
+          "severity": "WARNING",
+          "message": "El nivel del tanque 4 de elevación se encuentra bajo."
+        },
+
+        "5": {
+          "point": "AlarmLowLevelElev2",
+          "name": "Nivel bajo - Tanque 5 - Elevación 2",
+          "severity": "WARNING",
+          "message": "El nivel del tanque 5 de elevación se encuentra bajo."
+        },
+
+        "6": {
+          "point": "AlarmCriticLevelFire",
+          "name": "Nivel crítico - Tanque 1 de incendio",
+          "severity": "CRITICAL",
+          "message": "El nivel del tanque 1 de incendio es CRÍTICO."
+        },
+
+        "7": {
+          "point": "AlarmCriticLevelPress1",
+          "name": "Nivel crítico - Tanque 2 - Presurización 1",
+          "severity": "CRITICAL",
+          "message": "El nivel del tanque 2 de presurización es CRÍTICO."
+        },
+
+        "8": {
+          "point": "AlarmCriticLevelPress2",
+          "name": "Nivel crítico - Tanque 3 - Presurización 2",
+          "severity": "CRITICAL",
+          "message": "El nivel del tanque 3 de presurización es CRÍTICO."
+        },
+
+        "9": {
+          "point": "AlarmCriticLevelElev1",
+          "name": "Nivel crítico - Tanque 4 - Elevación 1",
+          "severity": "CRITICAL",
+          "message": "El nivel del tanque 4 de elevación es CRÍTICO."
+        },
+
+        "10": {
+          "point": "AlarmCriticLevelElev2",
+          "name": "Nivel crítico - Tanque 5 - Elevación 2",
+          "severity": "CRITICAL",
+          "message": "El nivel del tanque 5 de elevación es CRÍTICO."
+        },
+
+        "11": {
+          "point": "AlarmCriticLevelChlorine",
+          "name": "Nivel crítico - Tanque de Cloro",
+          "severity": "CRITICAL",
+          "message": "El nivel de cloro es CRÍTICO."
+        }
+       }
+     },
 
     "AlarmsControlsBlock": {
       "name": "Bloque de Alarmas Controladores",
@@ -109,19 +195,101 @@
       "scan": 1000,
       "read": true,
       "write": false,
+      "alarm": true,
+
       "bits": {
-        "0": {"point": "AlarmFireDashEnergized", "name": "Tablero de incendio energizado"},
-        "1": {"point": "AlarmFireDashPhase", "name": "Alarma Falta de Fase Tablero Incendio"},
-        "2": {"point": "AlarmFireBombOn", "name": "Bomba de Incendio Encendida"},
-        "3": {"point": "AlarmFireJockeyBombOn", "name": "Bomba de Incendio Jockey Encendida"},
-        "4": {"point": "AlarmControlerElev1", "name": "Alarma Controlador Elevación 1"},
-        "5": {"point": "AlarmControlerElev2", "name": "Alarma Controlador Elevación 2"},
-        "6": {"point": "AlarmControlerElev3", "name": "Alarma Controlador Elevación 3"},
-        "7": {"point": "AlarmControlerPress1", "name": "Alarma Controlador Presurización 1"},
-        "8": {"point": "AlarmControlerPress2", "name": "Alarma Controlador Presurización 2"},
-        "9": {"point": "AlarmControlerPress3", "name": "Alarma Controlador Presurización 3"},
-        "10": {"point": "AlarmControlerPress4", "name": "Alarma Controlador Presurización 4"}
-       }
-     }
+        "0": {
+          "point": "AlarmFireDashEnergized",
+          "name": "Falla de alimentación - Tablero de Incendio",
+          "severity": "CRITICAL",
+          "message": "Se detectó pérdida de alimentación en el Tablero de Incendio"
+        },
+
+        "1": {
+          "point": "AlarmFireDashPhase",
+          "name": "Falta de fase - Tablero de incendio",
+          "severity": "CRITICAL",
+          "message": "Se detectó una falta de fase en el tablero de incendio."
+        },
+
+        "2": {
+          "point": "AlarmFireBombOn",
+          "name": "Bomba de incendio encendida",
+          "severity": "CRITICAL",
+          "message": "La bomba principal del sistema de incendio se encuentra encendida."
+        },
+
+        "3": {
+          "point": "AlarmFireJockeyBombOn",
+          "name": "Bomba jockey de incendio encendida",
+          "severity": "CRITICAL",
+          "message": "La bomba jockey del sistema de incendio se encuentra encendida."
+        },
+
+        "4": {
+          "point": "AlarmControlerElev1",
+          "name": "Falla controlador - Elevación 1",
+          "severity": "WARNING",
+          "message": "Se detectó una falla en el controlador de elevación 1."
+        },
+
+        "5": {
+          "point": "AlarmControlerElev2",
+          "name": "Falla controlador - Elevación 2",
+          "severity": "WARNING",
+          "message": "Se detectó una falla en el controlador de elevación 2."
+        },
+
+        "6": {
+          "point": "AlarmControlerElev3",
+          "name": "Falla controlador - Elevación 3",
+          "severity": "WARNING",
+          "message": "Se detectó una falla en el controlador de elevación 3."
+        },
+
+        "7": {
+          "point": "AlarmControlerPress1",
+          "name": "Falla controlador - Presurización 1",
+          "severity": "WARNING",
+          "message": "Se detectó una falla en el controlador de presurización 1."
+        },
+
+        "8": {
+          "point": "AlarmControlerPress2",
+          "name": "Falla controlador - Presurización 2",
+          "severity": "WARNING",
+          "message": "Se detectó una falla en el controlador de presurización 2."
+        },
+
+        "9": {
+          "point": "AlarmControlerPress3",
+          "name": "Falla controlador - Presurización 3",
+          "severity": "WARNING",
+          "message": "Se detectó una falla en el controlador de presurización 3."
+        },
+
+        "10": {
+          "point": "AlarmControlerPress4",
+          "name": "Falla controlador - Presurización 4",
+          "severity": "WARNING",
+          "message": "Se detectó una falla en el controlador de presurización 4."
+        }
+      }
+   },
+
+     "HeartBitCounter": {
+        "name": "Heartbeat PLC TM221",
+         "fc": 3,
+        "address": 199,
+        "quantity": 1,
+        "type": "uint16",
+        "multiplier": 1,
+        "swap": false,
+        "unit": "",
+        "decimals": 0,
+        "scan": 1000,
+        "read": true,
+        "write": false
+        }
   }
 }
