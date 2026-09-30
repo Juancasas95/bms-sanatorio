@@ -251,8 +251,8 @@
         "sendError": false,
         "encoding": "none",
         "allProps": false,
-        "x": 640,
-        "y": 40,
+        "x": 660,
+        "y": 200,
         "wires": [
             [
                 "96e574ff7fe5cb22"
@@ -271,8 +271,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 840,
-        "y": 40,
+        "x": 860,
+        "y": 200,
         "wires": [
             [
                 "87157c53317ae978"
@@ -291,8 +291,8 @@
         "sendError": false,
         "encoding": "none",
         "allProps": false,
-        "x": 630,
-        "y": 100,
+        "x": 650,
+        "y": 260,
         "wires": [
             [
                 "ff758161dc2b7b51"
@@ -311,8 +311,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 840,
-        "y": 100,
+        "x": 860,
+        "y": 260,
         "wires": [
             [
                 "87157c53317ae978"
@@ -331,8 +331,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 630,
-        "y": 160,
+        "x": 650,
+        "y": 320,
         "wires": [
             [
                 "87157c53317ae978"
@@ -360,8 +360,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "date",
-        "x": 100,
-        "y": 120,
+        "x": 120,
+        "y": 280,
         "wires": [
             [
                 "751e59ba1931592b"
@@ -380,8 +380,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 670,
-        "y": 260,
+        "x": 690,
+        "y": 420,
         "wires": [
             [
                 "3dabc913f1520aa6",
@@ -410,8 +410,8 @@
         "topic": "",
         "payload": "",
         "payloadType": "date",
-        "x": 110,
-        "y": 180,
+        "x": 130,
+        "y": 340,
         "wires": [
             [
                 "751e59ba1931592b"
@@ -431,8 +431,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 910,
-        "y": 260,
+        "x": 930,
+        "y": 420,
         "wires": []
     },
     {
@@ -440,21 +440,22 @@
         "type": "function",
         "z": "548bfb93b2adf834",
         "name": "Init Startup State",
-        "func": "// ======================================================\n// INIT STARTUP STATE\n// ======================================================\n// Inicializa un nuevo ciclo de arranque/configuración.\n//\n// OUTPUT 1:\n//   Dispara la carga de gateways, devices y drivers.\n//\n// OUTPUT 2:\n//   Dispara el watchdog de timeout del Startup.\n// ======================================================\n\nconst now = Date.now();\n\nconst runId =\n    now.toString(36) +\n    \"-\" +\n    Math.random().toString(16).slice(2);\n\n\n// ------------------------------------------------------\n// ESTADO INICIAL\n// ------------------------------------------------------\n\nconst startupState = {\n\n    runId: runId,\n\n    status: \"LOADING\",\n\n    startedAt: new Date(now).toISOString(),\n\n    readyAt: null,\n\n    durationMs: null,\n\n    components: {\n\n        gateways: {\n            reported: false,\n            ok: false,\n            count: 0,\n            error: null\n        },\n\n        devices: {\n            reported: false,\n            ok: false,\n            count: 0,\n            error: null\n        },\n\n        drivers: {\n            reported: false,\n            ok: false,\n            count: 0,\n            error: null\n        }\n\n    },\n\n    validation: {\n        ok: false,\n        errors: [],\n        warnings: []\n    },\n\n    errors: []\n\n};\n\n\n// ------------------------------------------------------\n// CERRAR EL GATE DEL SISTEMA\n// ------------------------------------------------------\n\nglobal.set(\"systemReady\", false);\n\nglobal.set(\"startupState\", startupState);\n\n\n// ------------------------------------------------------\n// ESTADO VISUAL\n// ------------------------------------------------------\n\nnode.status({\n    fill: \"yellow\",\n    shape: \"ring\",\n    text: \"LOADING\"\n});\n\n\n// ------------------------------------------------------\n// MENSAJE DE STARTUP\n// ------------------------------------------------------\n\nmsg.startupRunId = runId;\n\nmsg.startup = {\n    action: \"LOAD_ALL\",\n    runId: runId,\n    timestamp: startupState.startedAt\n};\n\n\n// Creamos dos mensajes independientes.\nconst loadMsg = RED.util.cloneMessage(msg);\nconst timeoutMsg = RED.util.cloneMessage(msg);\n\n\n// OUTPUT 1 = carga\n// OUTPUT 2 = watchdog\n\nreturn [\n    loadMsg,\n    timeoutMsg\n];",
+        "func": "// ======================================================\n// INIT STARTUP STATE\n// ======================================================\n//\n// Inicializa un nuevo ciclo de arranque/configuración.\n//\n// COMPONENTES OBLIGATORIOS:\n//\n// - gateways\n// - devices\n// - drivers\n// - system\n//\n// OUTPUT 1:\n//   Dispara la carga de configuraciones.\n//\n// OUTPUT 2:\n//   Dispara watchdog de timeout.\n//\n// ======================================================\n\n\nconst now =\n    Date.now();\n\n\nconst runId =\n    now.toString(36) +\n    \"-\" +\n    Math.random()\n        .toString(16)\n        .slice(2);\n\n\n// ======================================================\n// ESTADO INICIAL\n// ======================================================\n\nconst startupState = {\n\n    runId:\n        runId,\n\n    status:\n        \"LOADING\",\n\n    startedAt:\n        new Date(now).toISOString(),\n\n    readyAt:\n        null,\n\n    durationMs:\n        null,\n\n    components: {\n\n        gateways: {\n\n            reported:\n                false,\n\n            ok:\n                false,\n\n            count:\n                0,\n\n            error:\n                null\n        },\n\n\n        devices: {\n\n            reported:\n                false,\n\n            ok:\n                false,\n\n            count:\n                0,\n\n            error:\n                null\n        },\n\n\n        drivers: {\n\n            reported:\n                false,\n\n            ok:\n                false,\n\n            count:\n                0,\n\n            error:\n                null\n        },\n\n\n        system: {\n\n            reported:\n                false,\n\n            ok:\n                false,\n\n            count:\n                0,\n\n            error:\n                null\n        }\n    },\n\n\n    validation: {\n\n        ok:\n            false,\n\n        errors:\n            [],\n\n        warnings:\n            []\n    },\n\n\n    errors:\n        []\n};\n\n\n// ======================================================\n// CERRAR GATE DEL SISTEMA\n// ======================================================\n\nglobal.set(\n    \"systemReady\",\n    false\n);\n\n\nglobal.set(\n    \"startupState\",\n    startupState\n);\n\n\n// ======================================================\n// ESTADO VISUAL\n// ======================================================\n\nnode.status({\n\n    fill:\n        \"yellow\",\n\n    shape:\n        \"ring\",\n\n    text:\n        \"LOADING\"\n\n});\n\n\n// ======================================================\n// MENSAJE STARTUP\n// ======================================================\n\nmsg.startupRunId =\n    runId;\n\n\nmsg.startup = {\n\n    action:\n        \"LOAD_ALL\",\n\n    runId:\n        runId,\n\n    timestamp:\n        startupState.startedAt\n};\n\n\n// ======================================================\n// MENSAJES INDEPENDIENTES\n// ======================================================\n\nconst loadMsg =\n    RED.util.cloneMessage(\n        msg\n    );\n\n\nconst timeoutMsg =\n    RED.util.cloneMessage(\n        msg\n    );\n\n\n// ======================================================\n// SALIDAS\n// ======================================================\n\nreturn [\n\n    loadMsg,\n\n    timeoutMsg\n];",
         "outputs": 2,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 350,
-        "y": 120,
+        "x": 370,
+        "y": 280,
         "wires": [
             [
                 "9b9982ad2806f380",
                 "919a7d4bc66c44a3",
                 "a38f4c9cd0c26bf0",
-                "f82a41e075ee70b1"
+                "f82a41e075ee70b1",
+                "cddf38a6d65db769"
             ],
             [
                 "a58d43f52202b069"
@@ -466,7 +467,7 @@
         "type": "function",
         "z": "548bfb93b2adf834",
         "name": "Startup Coordinator",
-        "func": "// ======================================================\n// STARTUP COORDINATOR\n// ======================================================\n//\n// Espera el reporte de:\n//\n// gateways\n// devices\n// drivers\n//\n// Ningún componente individual puede declarar\n// al BMS como READY.\n// ======================================================\n\nconst event = msg.startupEvent;\n\nlet state = global.get(\"startupState\");\n\n\n// ------------------------------------------------------\n// VALIDACIONES\n// ------------------------------------------------------\n\nif (!state) {\n\n    node.warn(\n        \"Startup Coordinator recibió un mensaje sin startupState.\"\n    );\n\n    return [null, null];\n}\n\n\nif (!event || !event.component) {\n\n    node.warn(\n        \"Startup Coordinator recibió un mensaje sin startupEvent.\"\n    );\n\n    return [null, null];\n}\n\n\n// Ignorar mensajes pertenecientes a un startup anterior.\n\nif (\n    msg.startupRunId &&\n    msg.startupRunId !== state.runId\n) {\n\n    node.warn(\n        \"Ignorado mensaje perteneciente a un Startup anterior.\"\n    );\n\n    return [null, null];\n}\n\n\nif (!state.components[event.component]) {\n\n    node.warn(\n        `Componente de Startup desconocido: ${event.component}`\n    );\n\n    return [null, null];\n}\n\n\n// ------------------------------------------------------\n// REGISTRAR RESULTADO\n// ------------------------------------------------------\n\nstate.components[event.component] = {\n\n    reported: true,\n\n    ok: event.ok === true,\n\n    count: Number(event.count || 0),\n\n    error: event.error || null\n\n};\n\n\nglobal.set(\"startupState\", state);\n\n\n// ------------------------------------------------------\n// VER CUÁNTOS RESPONDIERON\n// ------------------------------------------------------\n\nconst componentNames =\n    Object.keys(state.components);\n\n\nconst reportedCount =\n    componentNames.filter(\n        name =>\n            state.components[name].reported === true\n    ).length;\n\n\nnode.status({\n\n    fill: \"yellow\",\n\n    shape: \"ring\",\n\n    text:\n        `LOADING ${reportedCount}/${componentNames.length}`\n\n});\n\n\n// ------------------------------------------------------\n// TODAVÍA FALTA ALGÚN COMPONENTE\n// ------------------------------------------------------\n\nif (reportedCount < componentNames.length) {\n\n    return [null, null];\n}\n\n\n// ------------------------------------------------------\n// EVITAR EJECUTAR DOS VECES\n// ------------------------------------------------------\n\nif (state.coordinatorCompleted === true) {\n\n    return [null, null];\n}\n\n\nstate.coordinatorCompleted = true;\n\n\n// ------------------------------------------------------\n// COMPROBAR ERRORES\n// ------------------------------------------------------\n\nconst failedComponents =\n    componentNames.filter(\n        name =>\n            state.components[name].ok !== true\n    );\n\n\nif (failedComponents.length > 0) {\n\n    const errors =\n        failedComponents.map(name => {\n\n            const component =\n                state.components[name];\n\n            return (\n                `${name}: ` +\n                (component.error || \"error desconocido\")\n            );\n        });\n\n\n    state.status = \"FAULT\";\n\n    state.errors = errors;\n\n    global.set(\"startupState\", state);\n\n    global.set(\"systemReady\", false);\n\n\n    node.status({\n\n        fill: \"red\",\n\n        shape: \"ring\",\n\n        text: \"FAULT\"\n\n    });\n\n\n    msg.payload = {\n\n        status: \"FAULT\",\n\n        stage: \"LOAD\",\n\n        errors: errors\n\n    };\n\n\n    return [null, msg];\n}\n\n\n// ------------------------------------------------------\n// TODOS CARGADOS CORRECTAMENTE\n// ------------------------------------------------------\n\nstate.status = \"VALIDATING\";\n\nglobal.set(\"startupState\", state);\n\n\nnode.status({\n\n    fill: \"yellow\",\n\n    shape: \"dot\",\n\n    text: \"VALIDATING\"\n\n});\n\n\nmsg.payload = {\n\n    gateways:\n        state.components.gateways.count,\n\n    devices:\n        state.components.devices.count,\n\n    drivers:\n        state.components.drivers.count\n\n};\n\n\nreturn [msg, null];",
+        "func": "// ======================================================\n// STARTUP COORDINATOR\n// ======================================================\n//\n// RESPONSABILIDAD:\n//\n// Esperar el reporte de TODOS los componentes declarados\n// en startupState.components.\n//\n// Actualmente:\n//\n// - gateways\n// - devices\n// - drivers\n// - system\n//\n// Ningún componente individual puede declarar\n// al BMS como READY.\n//\n// Cuando todos los componentes cargaron correctamente:\n//\n//     LOADED X/X\n//          ↓\n//     Validate Configuration\n//\n// El estado READY definitivo pertenece a System State.\n//\n// ======================================================\n\n\nconst event =\n    msg.startupEvent;\n\n\nlet state =\n    global.get(\"startupState\");\n\n\n// ======================================================\n// 1. VALIDAR STARTUP STATE\n// ======================================================\n\nif (!state) {\n\n    node.status({\n\n        fill:\n            \"red\",\n\n        shape:\n            \"ring\",\n\n        text:\n            \"NO STARTUP STATE\"\n    });\n\n\n    node.warn(\n        \"Startup Coordinator recibió un mensaje sin startupState.\"\n    );\n\n\n    return [\n        null,\n        null\n    ];\n}\n\n\n// ======================================================\n// 2. VALIDAR EVENTO\n// ======================================================\n\nif (\n    !event ||\n    !event.component\n) {\n\n    node.warn(\n        \"Startup Coordinator recibió un mensaje sin startupEvent.\"\n    );\n\n\n    return [\n        null,\n        null\n    ];\n}\n\n\n// ======================================================\n// 3. DESCARTAR EVENTOS DE UN STARTUP ANTERIOR\n// ======================================================\n\nif (\n    msg.startupRunId &&\n    msg.startupRunId !== state.runId\n) {\n\n    node.warn(\n        \"Ignorado mensaje perteneciente a un Startup anterior.\"\n    );\n\n\n    return [\n        null,\n        null\n    ];\n}\n\n\n// ======================================================\n// 4. VALIDAR COMPONENTE\n// ======================================================\n\nif (\n    !state.components ||\n    !state.components[event.component]\n) {\n\n    node.warn(\n        `Componente de Startup desconocido: ${event.component}`\n    );\n\n\n    return [\n        null,\n        null\n    ];\n}\n\n\n// ======================================================\n// 5. REGISTRAR RESULTADO DEL COMPONENTE\n// ======================================================\n\nstate.components[event.component] = {\n\n    reported:\n        true,\n\n    ok:\n        event.ok === true,\n\n    count:\n        Number(\n            event.count || 0\n        ),\n\n    error:\n        event.error || null\n};\n\n\nglobal.set(\n    \"startupState\",\n    state\n);\n\n\n// ======================================================\n// 6. CONTAR COMPONENTES\n// ======================================================\n\nconst componentNames =\n    Object.keys(\n        state.components\n    );\n\n\nconst reportedCount =\n    componentNames.filter(\n        name =>\n            state.components[name].reported === true\n    ).length;\n\n\nconst totalCount =\n    componentNames.length;\n\n\n// ======================================================\n// 7. TODAVÍA ESTAMOS CARGANDO\n// ======================================================\n\nif (\n    reportedCount < totalCount\n) {\n\n    node.status({\n\n        fill:\n            \"yellow\",\n\n        shape:\n            \"ring\",\n\n        text:\n            `LOADING ${reportedCount}/${totalCount}`\n    });\n\n\n    return [\n        null,\n        null\n    ];\n}\n\n\n// ======================================================\n// 8. EVITAR EJECUTAR DOS VECES\n// ======================================================\n\nif (\n    state.coordinatorCompleted === true\n) {\n\n    return [\n        null,\n        null\n    ];\n}\n\n\nstate.coordinatorCompleted =\n    true;\n\n\n// ======================================================\n// 9. COMPROBAR COMPONENTES FALLIDOS\n// ======================================================\n\nconst failedComponents =\n    componentNames.filter(\n        name =>\n            state.components[name].ok !== true\n    );\n\n\nif (\n    failedComponents.length > 0\n) {\n\n    const errors =\n        failedComponents.map(\n            name => {\n\n                const component =\n                    state.components[name];\n\n\n                return (\n                    `${name}: ` +\n                    (\n                        component.error ||\n                        \"error desconocido\"\n                    )\n                );\n            }\n        );\n\n\n    state.status =\n        \"FAULT\";\n\n\n    state.errors =\n        errors;\n\n\n    global.set(\n        \"startupState\",\n        state\n    );\n\n\n    global.set(\n        \"systemReady\",\n        false\n    );\n\n\n    node.status({\n\n        fill:\n            \"red\",\n\n        shape:\n            \"ring\",\n\n        text:\n            \"FAULT\"\n    });\n\n\n    msg.payload = {\n\n        status:\n            \"FAULT\",\n\n        stage:\n            \"LOAD\",\n\n        errors:\n            errors\n    };\n\n\n    return [\n        null,\n        msg\n    ];\n}\n\n\n// ======================================================\n// 10. TODOS LOS COMPONENTES CARGADOS\n// ======================================================\n//\n// IMPORTANTE:\n//\n// El Coordinator terminó correctamente.\n//\n// Ahora entrega el control a:\n//\n//     Validate Configuration\n//\n// Por eso su estado visual definitivo es:\n//\n//     LOADED X/X\n//\n// y NO \"VALIDATING\".\n//\n// ======================================================\n\nstate.status =\n    \"VALIDATING\";\n\n\nglobal.set(\n    \"startupState\",\n    state\n);\n\n\nnode.status({\n\n    fill:\n        \"green\",\n\n    shape:\n        \"dot\",\n\n    text:\n        `LOADED ${reportedCount}/${totalCount}`\n});\n\n\n// ======================================================\n// 11. MENSAJE HACIA VALIDATE CONFIGURATION\n// ======================================================\n\nmsg.payload = {\n\n    gateways:\n        state.components.gateways?.count || 0,\n\n    devices:\n        state.components.devices?.count || 0,\n\n    drivers:\n        state.components.drivers?.count || 0,\n\n    system:\n        state.components.system?.count || 0\n};\n\n\n// ======================================================\n// SALIDAS\n// ======================================================\n//\n// OUTPUT 1:\n//   configuración cargada correctamente\n//\n// OUTPUT 2:\n//   error de carga\n//\n// ======================================================\n\nreturn [\n    msg,\n    null\n];",
         "outputs": 2,
         "timeout": 0,
         "noerr": 0,
@@ -474,7 +475,7 @@
         "finalize": "",
         "libs": [],
         "x": 1070,
-        "y": 160,
+        "y": 320,
         "wires": [
             [
                 "28993352c75b76c0"
@@ -501,8 +502,8 @@
         "drop": false,
         "allowrate": false,
         "outputs": 1,
-        "x": 160,
-        "y": 280,
+        "x": 180,
+        "y": 440,
         "wires": [
             [
                 "c12e3d9cc0e0a230"
@@ -521,8 +522,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 380,
-        "y": 280,
+        "x": 400,
+        "y": 440,
         "wires": [
             [
                 "935cbaa9db74671d"
@@ -541,8 +542,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 320,
-        "y": 520,
+        "x": 340,
+        "y": 680,
         "wires": [
             [
                 "f82a41e075ee70b1"
@@ -564,8 +565,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 870,
-        "y": 520,
+        "x": 890,
+        "y": 680,
         "wires": [
             [
                 "9fc11f478fd64cf5",
@@ -586,9 +587,49 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 1130,
-        "y": 520,
+        "x": 1150,
+        "y": 680,
         "wires": []
+    },
+    {
+        "id": "cddf38a6d65db769",
+        "type": "file in",
+        "z": "548bfb93b2adf834",
+        "name": "Read system.json",
+        "filename": "/config/system.json",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 650,
+        "y": 140,
+        "wires": [
+            [
+                "12f4c530fd019ef7"
+            ]
+        ]
+    },
+    {
+        "id": "12f4c530fd019ef7",
+        "type": "function",
+        "z": "548bfb93b2adf834",
+        "name": "Store system",
+        "func": "// ======================================================\n// STORE SYSTEM CONFIG\n// ======================================================\n//\n// RESPONSABILIDAD:\n//\n// - Parsear /config/system.json\n// - Validar estructura básica\n// - Guardar configuración en:\n//\n//       global.systemConfig\n//\n// - Reportar resultado al Startup Coordinator\n//\n// ======================================================\n\n\nconst component =\n    \"system\";\n\n\ntry {\n\n    // ==================================================\n    // 1. PARSEAR JSON\n    // ==================================================\n\n    const systemConfig =\n        JSON.parse(\n            msg.payload\n        );\n\n\n    // ==================================================\n    // 2. VALIDACIÓN BASE\n    // ==================================================\n\n    if (\n        !systemConfig ||\n        typeof systemConfig !== \"object\" ||\n        Array.isArray(systemConfig)\n    ) {\n\n        throw new Error(\n            \"system.json no contiene un objeto JSON válido.\"\n        );\n    }\n\n\n    // ==================================================\n    // 3. VALIDAR SCAN\n    // ==================================================\n\n    if (\n        !systemConfig.scan ||\n        typeof systemConfig.scan !== \"object\" ||\n        Array.isArray(systemConfig.scan)\n    ) {\n\n        throw new Error(\n            \"system.json: falta configuración scan.\"\n        );\n    }\n\n\n    const scanKeys = [\n        \"fast\",\n        \"normal\",\n        \"slow\"\n    ];\n\n\n    for (\n        const key\n        of scanKeys\n    ) {\n\n        const value =\n            Number(\n                systemConfig.scan[key]\n            );\n\n\n        if (\n            !Number.isFinite(value) ||\n            value <= 0\n        ) {\n\n            throw new Error(\n                `system.json: scan.${key} inválido.`\n            );\n        }\n    }\n\n\n    // ==================================================\n    // 4. VALIDAR NOTIFICATIONS\n    // ==================================================\n\n    if (\n        !systemConfig.notifications ||\n        typeof systemConfig.notifications !== \"object\" ||\n        Array.isArray(systemConfig.notifications)\n    ) {\n\n        throw new Error(\n            \"system.json: falta configuración notifications.\"\n        );\n    }\n\n\n    const channels = [\n        \"whatsapp\",\n        \"email\",\n        \"telegram\"\n    ];\n\n\n    for (\n        const channel\n        of channels\n    ) {\n\n        const config =\n            systemConfig.notifications[channel];\n\n\n        if (\n            !config ||\n            typeof config !== \"object\" ||\n            Array.isArray(config)\n        ) {\n\n            throw new Error(\n                `system.json: falta notifications.${channel}.`\n            );\n        }\n\n\n        if (\n            typeof config.enabled !== \"boolean\"\n        ) {\n\n            throw new Error(\n                `system.json: notifications.${channel}.enabled ` +\n                `debe ser boolean.`\n            );\n        }\n    }\n\n\n    // ==================================================\n    // 5. GUARDAR CONFIGURACIÓN\n    // ==================================================\n\n    global.set(\n        \"systemConfig\",\n        systemConfig\n    );\n\n\n    // ==================================================\n    // 6. ESTADO VISUAL\n    // ==================================================\n\n    node.status({\n\n        fill:\n            \"green\",\n\n        shape:\n            \"dot\",\n\n        text:\n            \"SYSTEM CONFIG OK\"\n\n    });\n\n\n    // ==================================================\n    // 7. EVENTO STARTUP\n    // ==================================================\n\n    msg.startupEvent = {\n\n        component:\n            component,\n\n        ok:\n            true,\n\n        count:\n            1,\n\n        error:\n            null,\n\n        timestamp:\n            new Date().toISOString()\n\n    };\n\n\n    msg.payload =\n        systemConfig;\n\n\n    return msg;\n\n\n}\ncatch (err) {\n\n\n    // ==================================================\n    // ERROR\n    // ==================================================\n\n    global.set(\n        \"systemConfig\",\n        null\n    );\n\n\n    node.status({\n\n        fill:\n            \"red\",\n\n        shape:\n            \"ring\",\n\n        text:\n            \"ERROR\"\n\n    });\n\n\n    msg.startupEvent = {\n\n        component:\n            component,\n\n        ok:\n            false,\n\n        count:\n            0,\n\n        error:\n            err.message,\n\n        timestamp:\n            new Date().toISOString()\n\n    };\n\n\n    msg.payload =\n        null;\n\n\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 870,
+        "y": 140,
+        "wires": [
+            [
+                "87157c53317ae978"
+            ]
+        ]
     },
     {
         "id": "a33dd6265c9ed9af",
@@ -2561,7 +2602,7 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 920,
+        "x": 820,
         "y": 460,
         "wires": []
     },
@@ -2607,7 +2648,7 @@
         "type": "function",
         "z": "087926ec68603352",
         "name": "Severity / routing",
-        "func": "// ============================================\n// SEVERITY / ROUTING\n// ============================================\n//\n// Decide por qué canales debe enviarse\n// cada evento.\n//\n// Tanto ACTIVE como CLEARED utilizan\n// la severidad configurada para la alarma.\n// ============================================\n\n\nconst alarm = msg.alarm;\n\n\n// --------------------------------------------\n// VALIDACIÓN\n// --------------------------------------------\n\nif (!alarm) {\n    node.error(\"Severity / Routing: no existe msg.alarm\");\n    return null;\n}\n\nif (!alarm.severity) {\n    node.error(\"Severity / Routing: falta severity\");\n    return null;\n}\n\nif (\n    alarm.state !== \"ACTIVE\" &&\n    alarm.state !== \"CLEARED\"\n) {\n\n    node.error(\n        \"Severity / Routing: estado inválido: \" +\n        alarm.state\n    );\n\n    return null;\n}\n\n\n// --------------------------------------------\n// INICIALIZAR ROUTING\n// --------------------------------------------\n\nmsg.routing = {\n    whatsapp: false,\n    email: false,\n    telegram: false\n};\n\n\n// --------------------------------------------\n// ROUTING SEGÚN SEVERIDAD\n// --------------------------------------------\n\nswitch (alarm.severity) {\n\n    // ========================================\n    // CRITICAL\n    // ========================================\n\n    case \"CRITICAL\":\n\n        msg.routing.whatsapp = true;\n        msg.routing.email = true;\n        msg.routing.telegram = true;\n\n        break;\n\n\n    // ========================================\n    // WARNING\n    // ========================================\n\n    case \"WARNING\":\n\n        msg.routing.whatsapp = true;\n        msg.routing.email = true;\n        msg.routing.telegram = false;\n\n        break;\n\n\n    // ========================================\n    // INFO\n    // ========================================\n\n    case \"INFO\":\n\n        // Solo queda registrado en el log.\n\n        msg.routing.whatsapp = false;\n        msg.routing.email = false;\n        msg.routing.telegram = false;\n\n        break;\n\n\n    // ========================================\n    // DESCONOCIDO\n    // ========================================\n\n    default:\n\n        node.error(\n            \"Severity / Routing: severidad desconocida: \" +\n            alarm.severity\n        );\n\n        return null;\n}\n\n\n// --------------------------------------------\n// SALIDA\n// --------------------------------------------\n\nreturn msg;",
+        "func": "// ======================================================\n// SEVERITY / ROUTING\n// ======================================================\n//\n// RESPONSABILIDAD:\n//\n// 1. Determinar qué canales CORRESPONDEN según severidad.\n// 2. Consultar qué canales están HABILITADOS en system.json.\n// 3. Generar el routing efectivo.\n//\n// POLÍTICA:\n//\n// CRITICAL\n//   WhatsApp : sí\n//   Email    : sí\n//   Telegram : sí\n//\n// WARNING\n//   WhatsApp : sí\n//   Email    : sí\n//   Telegram : no\n//\n// INFO\n//   No genera notificación externa.\n//\n// IMPORTANTE:\n//\n// Un canal sólo se utiliza cuando:\n//\n//   política === true\n//          Y\n//   enabled === true\n//\n// ======================================================\n\n\n// ======================================================\n// 1. VALIDAR ALARMA\n// ======================================================\n\nconst alarm =\n    msg.alarm;\n\n\nif (\n    !alarm ||\n    typeof alarm !== \"object\"\n) {\n\n    node.error(\n        \"Severity / Routing: no existe msg.alarm\"\n    );\n\n    return null;\n}\n\n\nif (\n    typeof alarm.severity !== \"string\"\n) {\n\n    node.error(\n        \"Severity / Routing: falta severity\"\n    );\n\n    return null;\n}\n\n\nif (\n    alarm.state !== \"ACTIVE\" &&\n    alarm.state !== \"CLEARED\"\n) {\n\n    node.error(\n        \"Severity / Routing: estado inválido: \" +\n        alarm.state\n    );\n\n    return null;\n}\n\n\n// ======================================================\n// 2. SYSTEM CONFIG\n// ======================================================\n\nconst systemConfig =\n    global.get(\"systemConfig\");\n\n\nif (\n    !systemConfig ||\n    typeof systemConfig !== \"object\"\n) {\n\n    node.error(\n        \"Severity / Routing: systemConfig no está cargado.\"\n    );\n\n    return null;\n}\n\n\nconst notifications =\n    systemConfig.notifications;\n\n\nif (\n    !notifications ||\n    typeof notifications !== \"object\"\n) {\n\n    node.error(\n        \"Severity / Routing: falta configuración notifications.\"\n    );\n\n    return null;\n}\n\n\n// ======================================================\n// 3. DISPONIBILIDAD DE CANALES\n// ======================================================\n\nconst enabled = {\n\n    whatsapp:\n        notifications.whatsapp?.enabled === true,\n\n    email:\n        notifications.email?.enabled === true,\n\n    telegram:\n        notifications.telegram?.enabled === true\n};\n\n\n// ======================================================\n// 4. POLÍTICA SEGÚN SEVERIDAD\n// ======================================================\n\nconst policy = {\n\n    whatsapp:\n        false,\n\n    email:\n        false,\n\n    telegram:\n        false\n};\n\n\nswitch (\n    alarm.severity\n) {\n\n    // ==================================================\n    // CRITICAL\n    // ==================================================\n\n    case \"CRITICAL\":\n\n        policy.whatsapp =\n            true;\n\n        policy.email =\n            true;\n\n        policy.telegram =\n            true;\n\n        break;\n\n\n    // ==================================================\n    // WARNING\n    // ==================================================\n\n    case \"WARNING\":\n\n        policy.whatsapp =\n            true;\n\n        policy.email =\n            true;\n\n        policy.telegram =\n            false;\n\n        break;\n\n\n    // ==================================================\n    // INFO\n    // ==================================================\n\n    case \"INFO\":\n\n        // Sólo registro interno.\n\n        policy.whatsapp =\n            false;\n\n        policy.email =\n            false;\n\n        policy.telegram =\n            false;\n\n        break;\n\n\n    // ==================================================\n    // SEVERIDAD DESCONOCIDA\n    // ==================================================\n\n    default:\n\n        node.error(\n            \"Severity / Routing: severidad desconocida: \" +\n            alarm.severity\n        );\n\n        return null;\n}\n\n\n// ======================================================\n// 5. ROUTING EFECTIVO\n// ======================================================\n//\n// Canal efectivo =\n//\n//     policy && enabled\n//\n// ======================================================\n\nmsg.routing = {\n\n    whatsapp:\n        policy.whatsapp &&\n        enabled.whatsapp,\n\n    email:\n        policy.email &&\n        enabled.email,\n\n    telegram:\n        policy.telegram &&\n        enabled.telegram\n};\n\n\n// ======================================================\n// 6. METADATA DE DIAGNÓSTICO\n// ======================================================\n//\n// Útil para Debug y para el futuro manual.\n//\n// routingPolicy:\n//\n//   qué debería enviarse por severidad\n//\n// notificationChannels:\n//\n//   qué está actualmente habilitado\n//\n// routing:\n//\n//   qué realmente se enviará\n//\n// ======================================================\n\nmsg.routingPolicy = {\n\n    whatsapp:\n        policy.whatsapp,\n\n    email:\n        policy.email,\n\n    telegram:\n        policy.telegram\n};\n\n\nmsg.notificationChannels = {\n\n    whatsapp:\n        enabled.whatsapp,\n\n    email:\n        enabled.email,\n\n    telegram:\n        enabled.telegram\n};\n\n\n// ======================================================\n// 7. STATUS\n// ======================================================\n\nconst activeChannels =\n    Object.entries(msg.routing)\n        .filter(\n            ([, value]) =>\n                value === true\n        )\n        .map(\n            ([key]) =>\n                key\n        );\n\n\nif (\n    activeChannels.length === 0\n) {\n\n    node.status({\n\n        fill:\n            \"grey\",\n\n        shape:\n            \"ring\",\n\n        text:\n            \"SIN CANALES EXTERNOS\"\n\n    });\n\n}\nelse {\n\n    node.status({\n\n        fill:\n            \"green\",\n\n        shape:\n            \"dot\",\n\n        text:\n            activeChannels.join(\", \")\n\n    });\n}\n\n\n// ======================================================\n// SALIDA\n// ======================================================\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -2692,7 +2733,7 @@
         "type": "debug",
         "z": "087926ec68603352",
         "name": "debug 33",
-        "active": false,
+        "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -2709,7 +2750,7 @@
         "type": "debug",
         "z": "087926ec68603352",
         "name": "debug 34",
-        "active": false,
+        "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -2726,7 +2767,7 @@
         "type": "debug",
         "z": "087926ec68603352",
         "name": "debug 35",
-        "active": false,
+        "active": true,
         "tosidebar": true,
         "console": false,
         "tostatus": false,
@@ -2814,6 +2855,119 @@
         "x": 660,
         "y": 540,
         "wires": []
+    },
+    {
+        "id": "58b7cf4899a8eab8",
+        "type": "inject",
+        "z": "087926ec68603352",
+        "name": "Read Log",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 240,
+        "y": 660,
+        "wires": [
+            [
+                "a6670c2229c363da"
+            ]
+        ]
+    },
+    {
+        "id": "a6670c2229c363da",
+        "type": "function",
+        "z": "087926ec68603352",
+        "name": "Read Alarm log",
+        "func": "// ======================================================\n// READ ALARM LOG\n// ======================================================\n\nconst alarmLog =\n    flow.get(\"alarmLog\") || [];\n\n\nmsg.payload = {\n\n    count:\n        alarmLog.length,\n\n    alarms:\n        alarmLog\n\n};\n\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 660,
+        "wires": [
+            [
+                "b1b7f10d47467217"
+            ]
+        ]
+    },
+    {
+        "id": "b1b7f10d47467217",
+        "type": "debug",
+        "z": "087926ec68603352",
+        "name": "Alarm Log",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 630,
+        "y": 660,
+        "wires": []
+    },
+    {
+        "id": "5981e916471743ad",
+        "type": "inject",
+        "z": "087926ec68603352",
+        "name": "Clear Log",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 240,
+        "y": 720,
+        "wires": [
+            [
+                "1af14e24381f79f9"
+            ]
+        ]
+    },
+    {
+        "id": "1af14e24381f79f9",
+        "type": "function",
+        "z": "087926ec68603352",
+        "name": "Clear Alarm log",
+        "func": "// ======================================================\n// CLEAR ALARM LOG\n// ======================================================\n\nflow.set(\n    \"alarmLog\",\n    []\n);\n\n\nmsg.payload = {\n\n    status:\n        \"OK\",\n\n    message:\n        \"Alarm Log limpiado\",\n\n    timestamp:\n        new Date().toISOString()\n\n};\n\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 720,
+        "wires": [
+            []
+        ]
     },
     {
         "id": "de2b2fdd58e85e82",

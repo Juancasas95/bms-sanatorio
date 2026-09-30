@@ -3,5 +3,19 @@
     "fast": 5,
     "normal": 30,
     "slow": 300
+  },
+
+  "notifications": {
+    "whatsapp": {
+      "enabled": false
+    },
+
+    "email": {
+      "enabled": false
+    },
+
+    "telegram": {
+      "enabled": false
+    }
   }
 }
