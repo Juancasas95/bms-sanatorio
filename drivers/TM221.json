@@ -335,6 +335,181 @@
       "unit": "cm",
       "min": 100,
       "max": 160
+    },
+
+      "FillEVEnabledT1": {
+      "name": "EV de llenado T1 Incendio",
+      "fc": 1,
+      "writeFc": 5,
+      "address": 0,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000,
+      "read": true,
+      "write": true
+    },
+
+      "FillEVEnabledT2": {
+      "name": "EV de llenado T2 Presurizacion 1",
+      "fc": 1,
+      "writeFc": 5,
+      "address": 1,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000,
+      "read": true,
+      "write": true
+    },
+
+      "FillEVEnabledT3": {
+      "name": "EV de llenado T3 Presurizacion 2",
+      "fc": 1,
+      "writeFc": 5,
+      "address": 2,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000,
+      "read": true,
+      "write": true
+    },
+
+      "FillEVEnabledT4": {
+      "name": "EV de llenado T4 Elevacion 1",
+      "fc": 1,
+      "writeFc": 5,
+      "address": 3,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000,
+      "read": true,
+      "write": true
+    },
+
+      "FillEVEnabledT5": {
+      "name": "EV de llenado T5 Elevacion 2",
+      "fc": 1,
+      "writeFc": 5,
+      "address": 4,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000,
+      "read": true,
+      "write": true
+    },
+
+      "VolumeDm3Tank2": {
+      "name": "Consumo de Agua Tanque 2 en dm3",
+      "fc": 3,
+      "writeFc" : 16,
+      "address": 210,
+      "quantity": 2,
+      "type": "uint32",
+      "multiplier": 1,
+      "unit": "dm3",
+      "decimals": 1,
+      "scan": 5000,
+      "read": true,
+      "write": true
+    },
+
+      "VolumeDm3Tank3": {
+      "name": "Consumo de Agua Tanque 3 en dm3",
+      "fc": 3,
+      "writeFc" : 16,
+      "address": 216,
+      "quantity": 2,
+      "type": "uint32",
+      "multiplier": 1,
+      "unit": "dm3",
+      "decimals": 1,
+      "scan": 5000,
+      "read": true,
+      "write": true
+    },
+
+      "VolumeDm3Tank4": {
+      "name": "Consumo de Agua Tanque 4 en dm3",
+      "fc": 3,
+      "writeFc" : 16,
+      "address": 222,
+      "quantity": 2,
+      "type": "uint32",
+      "multiplier": 1,
+      "unit": "dm3",
+      "decimals": 1,
+      "scan": 5000,
+      "read": true,
+      "write": true
+    },
+
+      "VolumeDm3Tank5": {
+      "name": "Consumo de Agua Tanque 5 en dm3",
+      "fc": 3,
+      "writeFc" : 16,
+      "address": 228,
+      "quantity": 2,
+      "type": "uint32",
+      "multiplier": 1,
+      "unit": "dm3",
+      "decimals": 1,
+      "scan": 5000,
+      "read": true,
+      "write": true
+    },
+
+      "StateEVTank1": {
+      "name": "Estado EV de llenado Tanque 1",
+      "fc": 1,
+      "address": 5,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000,
+      "read": true,
+      "write": false
+    },
+
+      "StateEVTank2": {
+      "name": "Estado EV de llenado Tanque 2",
+      "fc": 1,
+      "address": 6,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000,
+      "read": true,
+      "write": false
+    },
+
+      "StateEVTank3": {
+      "name": "Estado EV de llenado Tanque 3",
+      "fc": 1,
+      "address": 7,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000,
+      "read": true,
+      "write": false
+    },
+
+      "StateEVTank4": {
+      "name": "Estado EV de llenado Tanque 4",
+      "fc": 1,
+      "address": 8,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000,
+      "read": true,
+      "write": false
+    },
+
+      "StateEVTank5": {
+      "name": "Estado EV de llenado Tanque 5",
+      "fc": 1,
+      "address": 9,
+      "quantity": 1,
+      "type": "bool",
+      "scan": 1000,
+      "read": true,
+      "write": false
     }
   }
 }
