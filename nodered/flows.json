@@ -1716,8 +1716,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 340,
-        "y": 80,
+        "x": 220,
+        "y": 60,
         "wires": []
     },
     {
@@ -1750,8 +1750,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 600,
-        "y": 80,
+        "x": 820,
+        "y": 60,
         "wires": []
     },
     {
@@ -1766,7 +1766,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 550,
+        "x": 730,
         "y": 140,
         "wires": [
             [
@@ -1847,12 +1847,12 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 290,
+        "x": 150,
         "y": 140,
         "wires": [
             [
                 "2ad27bcdfd0fc174",
-                "b3d4e52bb6a381df"
+                "670f18d071ee4a79"
             ]
         ]
     },
@@ -2047,6 +2047,47 @@
         "wires": []
     },
     {
+        "id": "670f18d071ee4a79",
+        "type": "function",
+        "z": "f65d29de0116f69b",
+        "name": "Diagnostic Command Safety Guard",
+        "func": "// ======================================================\n// DIAGNOSTIC COMMAND SAFETY GUARD\n// ======================================================\n//\n// Protege el canal:\n//\n//     bms/diagnostico/comando\n//\n// contra comandos MQTT retained.\n//\n// SALIDA 1:\n//     Comando NUEVO autorizado.\n//\n// SALIDA 2:\n//     Tombstone MQTT para eliminar el retained.\n//\n// POLÍTICA:\n//\n// - retained histórico:\n//       NO ejecutar\n//       eliminar del broker\n//\n// - comando nuevo:\n//       ejecutar una vez\n//       eliminar cualquier retained inmediatamente\n//\n// - tombstone:\n//       ignorar\n//\n// ======================================================\n\n\n// ======================================================\n// 1. VALIDAR TOPIC\n// ======================================================\n\nconst expectedTopic =\n    \"bms/diagnostico/comando\";\n\n\nif (\n    typeof msg.topic !== \"string\" ||\n    msg.topic !== expectedTopic\n) {\n\n    node.error(\n        \"Diagnostic Command Safety Guard: topic inválido: \" +\n        msg.topic\n    );\n\n    return [\n        null,\n        null\n    ];\n}\n\n\n// ======================================================\n// 2. DETECTAR PAYLOAD VACÍO\n// ======================================================\n\nlet emptyPayload = false;\n\n\nif (\n    msg.payload === null ||\n    msg.payload === undefined\n) {\n\n    emptyPayload = true;\n\n}\nelse if (\n    Buffer.isBuffer(msg.payload)\n) {\n\n    emptyPayload =\n        msg.payload.length === 0;\n\n}\nelse if (\n    typeof msg.payload === \"string\"\n) {\n\n    emptyPayload =\n        msg.payload.length === 0;\n}\n\n\n// ======================================================\n// TOMBSTONE\n// ======================================================\n//\n// El mensaje utilizado para borrar el retained\n// también puede volver a entrar por la suscripción.\n//\n// Se ignora completamente.\n// ======================================================\n\nif (emptyPayload) {\n\n    node.status({\n\n        fill: \"grey\",\n\n        shape: \"ring\",\n\n        text: \"TOMBSTONE\"\n\n    });\n\n\n    return [\n        null,\n        null\n    ];\n}\n\n\n// ======================================================\n// 3. PREPARAR LIMPIEZA\n// ======================================================\n\nconst clearMsg = {\n\n    topic:\n        expectedTopic,\n\n    payload:\n        \"\",\n\n    qos:\n        0,\n\n    retain:\n        true,\n\n    commandCleanup:\n        true,\n\n    timestamp:\n        Date.now()\n\n};\n\n\n// ======================================================\n// 4. RETAINED HISTÓRICO\n// ======================================================\n\nif (\n    msg.retain === true\n) {\n\n    node.status({\n\n        fill: \"yellow\",\n\n        shape: \"ring\",\n\n        text: \"RETAINED BLOCKED\"\n\n    });\n\n\n    node.warn(\n        \"MQTT DIAGNOSTIC COMMAND BLOCKED - retained histórico\"\n    );\n\n\n    return [\n\n        null,\n\n        clearMsg\n\n    ];\n}\n\n\n// ======================================================\n// 5. COMANDO NUEVO\n// ======================================================\n\nnode.status({\n\n    fill: \"green\",\n\n    shape: \"dot\",\n\n    text: \"COMMAND ACCEPTED\"\n\n});\n\n\nreturn [\n\n    msg,\n\n    clearMsg\n\n];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 440,
+        "y": 140,
+        "wires": [
+            [
+                "b3d4e52bb6a381df"
+            ],
+            [
+                "2e6d6f4873f7c7b8"
+            ]
+        ]
+    },
+    {
+        "id": "2e6d6f4873f7c7b8",
+        "type": "mqtt out",
+        "z": "f65d29de0116f69b",
+        "name": "Clear Retained Diagnostic",
+        "topic": "",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "3bb6fb820dd3038d",
+        "x": 870,
+        "y": 220,
+        "wires": []
+    },
+    {
         "id": "ca46874dcc29f8cb",
         "type": "mqtt in",
         "z": "434aa09526dd2e21",
@@ -2059,11 +2100,11 @@
         "rap": true,
         "rh": 0,
         "inputs": 0,
-        "x": 340,
-        "y": 160,
+        "x": 300,
+        "y": 80,
         "wires": [
             [
-                "87897336bc993962"
+                "dc341723ce298149"
             ]
         ]
     },
@@ -2430,6 +2471,47 @@
             [],
             []
         ]
+    },
+    {
+        "id": "dc341723ce298149",
+        "type": "function",
+        "z": "434aa09526dd2e21",
+        "name": "Command Safety Guard",
+        "func": "// ======================================================\n// MQTT COMMAND SAFETY GUARD\n// ======================================================\n//\n// Protege al Modbus Writer contra comandos MQTT retained.\n//\n// ENTRADA:\n//\n//   bms/<gateway>/<device>/<variable>/write\n//\n// SALIDA 1:\n//   Comando NUEVO autorizado para continuar al Writer.\n//\n// SALIDA 2:\n//   Tombstone MQTT para eliminar cualquier retained\n//   asociado al topic.\n//\n// REGLAS:\n//\n// 1. Un comando retained histórico NUNCA se ejecuta.\n//\n// 2. Todo comando nuevo se elimina inmediatamente\n//    del almacenamiento retained del broker.\n//\n// 3. Un payload vacío corresponde al tombstone generado\n//    por este mismo mecanismo y se ignora.\n//\n// ======================================================\n\n\n// ======================================================\n// 1. VALIDAR TOPIC\n// ======================================================\n\nif (\n    typeof msg.topic !== \"string\" ||\n    msg.topic.trim() === \"\"\n) {\n\n    node.error(\n        \"Command Safety Guard: msg.topic inválido.\"\n    );\n\n    return [\n        null,\n        null\n    ];\n}\n\n\nconst topic =\n    msg.topic.trim();\n\n\nconst parts =\n    topic.split(\"/\");\n\n\nif (\n    parts.length !== 5 ||\n    parts[0] !== \"bms\" ||\n    parts[4] !== \"write\"\n) {\n\n    node.error(\n        \"Command Safety Guard: topic de escritura inválido: \" +\n        topic\n    );\n\n    return [\n        null,\n        null\n    ];\n}\n\n\n// ======================================================\n// 2. DETECTAR PAYLOAD VACÍO\n// ======================================================\n//\n// Un retained se elimina publicando:\n//\n//     payload vacío\n//     retain = true\n//\n// Ese mensaje también puede llegar al MQTT IN.\n//\n// Nunca debe convertirse nuevamente en una escritura.\n// ======================================================\n\nlet emptyPayload = false;\n\n\nif (\n    msg.payload === null ||\n    msg.payload === undefined\n) {\n\n    emptyPayload = true;\n\n}\nelse if (\n    Buffer.isBuffer(msg.payload)\n) {\n\n    emptyPayload =\n        msg.payload.length === 0;\n\n}\nelse if (\n    typeof msg.payload === \"string\"\n) {\n\n    emptyPayload =\n        msg.payload.length === 0;\n}\n\n\n// Tombstone recibido.\n//\n// No ejecutar.\n// No volver a generar otro tombstone,\n// evitando cualquier posibilidad de loop.\nif (emptyPayload) {\n\n    node.status({\n\n        fill: \"grey\",\n\n        shape: \"ring\",\n\n        text: \"TOMBSTONE\"\n\n    });\n\n\n    return [\n        null,\n        null\n    ];\n}\n\n\n// ======================================================\n// 3. PREPARAR LIMPIEZA DEL RETAINED\n// ======================================================\n\nconst clearMsg = {\n\n    topic:\n        topic,\n\n    payload:\n        \"\",\n\n    qos:\n        0,\n\n    retain:\n        true,\n\n    commandCleanup:\n        true,\n\n    timestamp:\n        Date.now()\n\n};\n\n\n// ======================================================\n// 4. COMANDO RETAINED HISTÓRICO\n// ======================================================\n//\n// MQTT marca msg.retain = true cuando entrega un valor\n// retained existente al establecer la suscripción.\n//\n// Ese comando pertenece al pasado.\n//\n// Se elimina del broker,\n// pero NUNCA continúa al Writer.\n// ======================================================\n\nif (\n    msg.retain === true\n) {\n\n    node.status({\n\n        fill: \"yellow\",\n\n        shape: \"ring\",\n\n        text: \"RETAINED BLOCKED\"\n\n    });\n\n\n    node.warn(\n        \"MQTT COMMAND BLOCKED - retained histórico: \" +\n        topic\n    );\n\n\n    return [\n\n        null,\n\n        clearMsg\n\n    ];\n}\n\n\n// ======================================================\n// 5. COMANDO NUEVO\n// ======================================================\n//\n// Se permite UNA ejecución.\n//\n// En paralelo se envía el tombstone.\n//\n// Esto también cubre el caso donde el publisher\n// haya usado retain=true accidentalmente:\n// el comando actual se procesa una sola vez y\n// el retained se elimina inmediatamente.\n// ======================================================\n\nnode.status({\n\n    fill: \"green\",\n\n    shape: \"dot\",\n\n    text: \"COMMAND ACCEPTED\"\n\n});\n\n\nreturn [\n\n    msg,\n\n    clearMsg\n\n];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 570,
+        "y": 80,
+        "wires": [
+            [
+                "87897336bc993962"
+            ],
+            [
+                "f6dfa6c8a6fedf49"
+            ]
+        ]
+    },
+    {
+        "id": "f6dfa6c8a6fedf49",
+        "type": "mqtt out",
+        "z": "434aa09526dd2e21",
+        "name": "Clear Retained Command",
+        "topic": "",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "3bb6fb820dd3038d",
+        "x": 850,
+        "y": 80,
+        "wires": []
     },
     {
         "id": "ea9ea0d016079e1c",
@@ -3035,44 +3117,6 @@
                 "de2b2fdd58e85e82"
             ]
         ]
-    },
-    {
-        "id": "8c5457eab15bfa6c",
-        "type": "mqtt in",
-        "z": "4ffdac17e98d3ae7",
-        "name": "",
-        "topic": "bms/+/+/+/write",
-        "qos": "2",
-        "datatype": "auto-detect",
-        "broker": "3bb6fb820dd3038d",
-        "nl": false,
-        "rap": true,
-        "rh": 0,
-        "inputs": 0,
-        "x": 180,
-        "y": 360,
-        "wires": [
-            [
-                "ff02aab92b114c90"
-            ]
-        ]
-    },
-    {
-        "id": "ff02aab92b114c90",
-        "type": "debug",
-        "z": "4ffdac17e98d3ae7",
-        "name": "debug 25",
-        "active": false,
-        "tosidebar": true,
-        "console": false,
-        "tostatus": false,
-        "complete": "true",
-        "targetType": "full",
-        "statusVal": "",
-        "statusType": "auto",
-        "x": 460,
-        "y": 360,
-        "wires": []
     },
     {
         "id": "61d32fba33ee7de8",
