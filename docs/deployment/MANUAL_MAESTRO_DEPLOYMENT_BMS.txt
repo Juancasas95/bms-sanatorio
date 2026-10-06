@@ -1,0 +1,949 @@
+BMS SANATORIO
+MANUAL MAESTRO DE DEPLOYMENT, RESPALDO Y RECUPERACION
+Version documental: Fase 7 cerrada
+Core validado: c856dda
+Fecha de cierre tecnico: 06/10/2026
+
+======================================================================
+1. OBJETIVO DE ESTE MANUAL
+======================================================================
+
+Este documento explica, desde cero y con lenguaje operativo, como esta
+armado el deployment del BMS, que funcion cumple cada componente, que
+informacion se guarda en Git, que informacion se respalda aparte y como
+recuperar el sistema ante una falla.
+
+Esta escrito para que una persona con conocimientos basicos de Linux,
+Docker y redes pueda operar el sistema sin depender de la persona que lo
+desarrollo ni de una IA.
+
+Este documento NO reemplaza los otros manuales. Funciona como mapa general.
+
+Documentos complementarios:
+
+  MANUAL_BACKUP_CIFRADO_BMS.txt
+      Explica como generar, verificar, cifrar y custodiar backups.
+
+  MANUAL_RESTAURACION_MIGRACION_BMS.txt
+      Explica como recuperar el BMS o migrarlo a otro servidor.
+
+  REGISTRO_PRUEBAS_FASE7.txt
+      Deja evidencia de las pruebas reales realizadas durante la Fase 7.
+
+======================================================================
+2. IDEA CENTRAL: EL BMS SE RECUPERA CON DOS COSAS
+======================================================================
+
+Para recuperar el BMS completo se necesitan DOS fuentes:
+
+A) GIT
+   Contiene el codigo y la configuracion reproducible.
+
+B) BACKUP CIFRADO
+   Contiene el estado persistente que cambia durante la operacion.
+
+Ninguna de las dos por separado alcanza.
+
+Git puede reconstruir:
+
+  docker/docker-compose.yml
+  config/
+  drivers/
+  nodered/flows.json
+  scripts/
+  Dockerfile y parches de FUXA
+
+El backup recupera:
+
+  proyecto de FUXA
+  historicos/base de datos de FUXA
+  imagenes de FUXA
+  configuracion runtime de Node-RED
+  credenciales runtime si existen
+  base persistente de Mosquitto
+
+La filosofia es:
+
+  CODIGO Y CONFIGURACION REPRODUCIBLE = GIT
+  DATOS VIVOS Y ESTADO PERSISTENTE    = BACKUP
+
+======================================================================
+3. ESTRUCTURA GENERAL DEL BMS
+======================================================================
+
+Directorio de proyecto estandar:
+
+  /home/juancasas/bms-sanatorio
+
+Componentes principales:
+
+  Nginx
+      Punto de entrada web para los usuarios.
+      Es el servicio que se expone a la red.
+
+  FUXA
+      HMI/SCADA web.
+      Muestra pantallas, gauges, estados y permite acciones autorizadas.
+
+  Node-RED
+      Motor logico del BMS.
+      Lee configuraciones, agenda adquisiciones, realiza Modbus,
+      procesa alarmas, salud del sistema y escrituras.
+
+  Mosquitto
+      Broker MQTT.
+      Transporta mensajes entre FUXA y Node-RED y conserva los topics
+      configurados como retained.
+
+  Git
+      Control de versiones del proyecto.
+
+  Docker Compose
+      Define como se ejecutan los cuatro servicios anteriores.
+
+Flujo funcional principal:
+
+  PLC / medidores
+         |
+         | Modbus TCP / RTU
+         v
+      Node-RED
+         |
+         | MQTT
+         v
+      Mosquitto
+         |
+         v
+        FUXA
+         |
+         v
+       Usuario
+
+Flujo de escritura:
+
+  Usuario en FUXA
+         |
+         v
+  MQTT .../write
+         |
+         v
+  Command Safety Guard
+         |
+         v
+  Modbus Writer
+         |
+         v
+       PLC
+
+======================================================================
+4. CONTENEDORES Y PUERTOS
+======================================================================
+
+Contenedores:
+
+  bms-nginx
+      Imagen: nginx:stable-alpine
+
+  bms-fuxa
+      Imagen validada: bms-fuxa:1.3.4-rolefix1
+
+  bms-nodered
+      Imagen: nodered/node-red:5.0.1
+
+  bms-mosquitto
+      Imagen: eclipse-mosquitto:2.0
+
+Exposicion de puertos validada:
+
+  Puerto 80
+      Nginx.
+      Accesible desde la red.
+      Es el acceso normal de usuarios al BMS.
+
+  Puerto 1880
+      Node-RED.
+      Ligado a 127.0.0.1.
+      No se expone directamente a la LAN.
+
+  Puerto 1881
+      FUXA.
+      Ligado a 127.0.0.1.
+      El usuario debe entrar por Nginx, no directamente por este puerto.
+
+  Puerto 1883
+      Mosquitto MQTT.
+      Ligado a 127.0.0.1.
+      No debe quedar expuesto directamente a la LAN.
+
+Comprobacion:
+
+  docker ps --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+
+  ss -lnt | grep -E '(:80 |:1880 |:1881 |:1883 )'
+
+Resultado esperado:
+
+  80      visible en la red
+  1880    127.0.0.1
+  1881    127.0.0.1
+  1883    127.0.0.1
+
+======================================================================
+5. POR QUE SE USA DOCKER
+======================================================================
+
+Docker encapsula cada aplicacion y reduce las diferencias entre maquinas.
+
+Ventajas practicas:
+
+  - Node-RED siempre usa una version definida.
+  - Mosquitto siempre usa una version definida.
+  - Nginx usa una version definida.
+  - FUXA se construye a partir de una receta controlada.
+  - Los servicios se pueden migrar entre ARM64 y x86_64.
+  - La configuracion queda en Docker Compose.
+  - Los datos importantes viven fuera del contenedor en bind mounts.
+
+Un contenedor NO debe considerarse un backup.
+
+Si se borra un contenedor, debe poder recrearse desde:
+
+  Git + imagenes Docker + datos persistentes restaurados.
+
+======================================================================
+6. QUE ES UN BIND MOUNT Y POR QUE IMPORTA
+======================================================================
+
+Un bind mount hace que una carpeta del host aparezca dentro del contenedor.
+
+Ejemplo conceptual:
+
+  Host:
+      /home/juancasas/bms-sanatorio/nodered
+
+  Contenedor:
+      /data
+
+Esto permite destruir y recrear el contenedor sin perder los archivos que
+estan en el host.
+
+Datos persistentes importantes:
+
+FUXA:
+  fuxa/appdata
+  fuxa/db
+  fuxa/images
+
+Node-RED:
+  nodered/flows.json               -> Git
+  nodered/.config.nodes.json       -> backup
+  nodered/.config.runtime.json     -> backup
+  nodered/.config.users.json       -> backup
+  nodered/flows_cred.json          -> backup si existe
+
+Mosquitto:
+  mosquitto/data/mosquitto.db      -> backup
+
+IMPORTANTE:
+
+  nodered/flows.json es codigo/configuracion del Core y viene de Git.
+  No se restaura desde el backup.
+
+======================================================================
+7. FUXA PERSONALIZADO
+======================================================================
+
+FUXA no se ejecuta como una instalacion improvisada.
+
+La version validada es:
+
+  FUXA 1.3.4
+
+La imagen local validada es:
+
+  bms-fuxa:1.3.4-rolefix1
+
+Se construye con archivos versionados en:
+
+  docker/fuxa/
+
+Incluye parches controlados para:
+
+  - permisos/roles
+  - timeout/sesion
+
+Los parches estan disenados para fallar si la version objetivo no coincide
+con el codigo esperado.
+
+Esto es intencional.
+
+NO actualizar FUXA manualmente a una version nueva sin volver a validar:
+
+  - login
+  - roles
+  - scripts
+  - lectura MQTT
+  - escritura MQTT
+  - pantallas
+  - persistencia
+  - backup/restore
+
+======================================================================
+8. ROLES DE FUXA
+======================================================================
+
+Roles funcionales definidos y verificados:
+
+  BMS_VIEWER
+  OPERATOR
+  MAINTENANCE
+  ADMIN
+
+Tambien existe el administrador interno utilizado para administracion.
+
+Despues de una migracion o restore se debe validar, al menos:
+
+  - acceso con administrador
+  - acceso con un usuario no administrador
+  - restricciones segun rol
+  - acceso a Explorer solo para perfiles autorizados
+
+======================================================================
+9. QUE ES GIT Y QUE FUNCION CUMPLE
+======================================================================
+
+Git guarda versiones del proyecto.
+
+Repositorio principal:
+
+  github.com/Juancasas95/bms-sanatorio
+
+Branch operativa:
+
+  main
+
+Commit de cierre de la Fase 7:
+
+  c856dda
+  Deployment - cifrar y validar backups reproducibles
+
+Commits importantes inmediatamente anteriores:
+
+  b8bd04d
+  Deployment - agregar restore seguro con rollback
+
+  e85075a
+  Core - proteger comandos MQTT retained
+
+Comandos basicos:
+
+  cd /home/juancasas/bms-sanatorio
+
+  git status --short
+  git log -3 --oneline
+  git fetch origin
+  git pull --ff-only origin main
+
+Interpretacion de:
+
+  git status --short
+
+Sin salida:
+  repositorio limpio.
+
+Con lineas:
+  existen cambios locales o archivos no versionados.
+
+El backup oficial requiere Git limpio salvo que se use deliberadamente
+el override de prueba. En produccion NO utilizar ese override.
+
+======================================================================
+10. QUE ES EL BACKUP
+======================================================================
+
+El backup es una fotografia consistente de los datos persistentes que no
+pueden reconstruirse solo desde Git.
+
+Script:
+
+  scripts/backup.sh
+
+El script:
+
+  1. comprueba que backups/ sea escribible
+  2. comprueba que age este disponible
+  3. valida la clave publica de cifrado
+  4. comprueba que Git este limpio
+  5. detecta que servicios estaban funcionando
+  6. detiene temporalmente esos servicios
+  7. copia datos persistentes
+  8. crea un TAR comprimido temporal
+  9. verifica que el TAR sea legible
+ 10. cifra el TAR con age
+ 11. genera SHA-256 portable
+ 12. verifica el SHA-256
+ 13. elimina el TAR sin cifrar
+ 14. vuelve a iniciar los servicios que estaban funcionando
+
+El archivo final tiene forma:
+
+  bms-backup-AAAAMMDD-HHMMSS.tar.gz.age
+
+y su checksum:
+
+  bms-backup-AAAAMMDD-HHMMSS.tar.gz.age.sha256
+
+======================================================================
+11. POR QUE SE DETIENEN TEMPORALMENTE LOS SERVICIOS
+======================================================================
+
+FUXA y Mosquitto modifican bases de datos mientras funcionan.
+
+Copiar una base mientras esta siendo modificada puede generar un respaldo
+inconsistente.
+
+Por eso el procedimiento prioriza consistencia:
+
+  detectar servicios
+  detener
+  copiar
+  validar
+  cifrar
+  reiniciar
+
+La interrupcion es breve y controlada.
+
+El script recuerda cuales servicios estaban activos y solo intenta
+restaurar ese mismo estado.
+
+======================================================================
+12. QUE ES AGE
+======================================================================
+
+age es la herramienta usada para cifrar los backups.
+
+Trabaja con un par de claves:
+
+  CLAVE PUBLICA
+      Puede estar en el servidor.
+      Sirve para CIFRAR.
+
+  CLAVE PRIVADA
+      Permite DESCIFRAR.
+      No debe permanecer en el servidor BMS.
+
+Archivo publico versionado:
+
+  config/backup-age-recipient.txt
+
+La clave privada de recuperacion debe custodiarse fuera del servidor.
+
+Principio:
+
+  El servidor puede crear backups.
+  El servidor por si solo NO debe poder abrir esos backups.
+
+Esto protege el contenido si alguien obtiene acceso al servidor o copia el
+archivo de backup.
+
+======================================================================
+13. CIFRADO NO ES LO MISMO QUE CHECKSUM
+======================================================================
+
+Son controles diferentes.
+
+CIFRADO AGE:
+  protege la confidencialidad.
+  Sin la clave privada no se puede leer el contenido.
+
+SHA-256:
+  protege la integridad.
+  Permite comprobar si el archivo cambio, se dano o se transfirio mal.
+
+Un SHA-256 NO oculta informacion.
+
+Por eso el sistema utiliza ambos.
+
+======================================================================
+14. CHECKSUM PORTABLE
+======================================================================
+
+El archivo .sha256 guarda:
+
+  HASH  nombre-del-archivo.age
+
+No guarda una ruta absoluta.
+
+Ejemplo:
+
+  d7042947...  bms-backup-20261006-075104.tar.gz.age
+
+Esto permite copiar:
+
+  .age
+  .sha256
+
+a otra carpeta u otra maquina y ejecutar:
+
+  sha256sum -c bms-backup-20261006-075104.tar.gz.age.sha256
+
+sin editar rutas.
+
+======================================================================
+15. MANIFEST DEL BACKUP
+======================================================================
+
+Dentro del backup se genera:
+
+  manifest.txt
+
+Su funcion es dejar trazabilidad.
+
+Registra informacion como:
+
+  fecha
+  hostname
+  commit Git
+  branch Git
+  estado Git
+  version Docker
+  version Docker Compose
+  imagenes
+  servicios activos antes del backup
+
+Durante un restore ayuda a responder:
+
+  De que servidor salio?
+  Con que codigo se genero?
+  Que version estaba corriendo?
+  El Git estaba limpio?
+
+======================================================================
+16. BACKUP OFICIAL DE CIERRE DE FASE 7
+======================================================================
+
+Archivo:
+
+  bms-backup-20261006-075104.tar.gz.age
+
+SHA-256:
+
+  d7042947e02b413d646628fdb3b6732c28fefc29b6a000eed60b76d459f39e55
+
+Commit del proyecto:
+
+  c856dda
+
+Condiciones verificadas:
+
+  Git CLEAN
+  cifrado age OK
+  SHA-256 OK
+  no quedo TAR sin cifrar
+  clave privada no presente en el servidor
+  servicios restaurados
+  Node-RED healthy
+
+======================================================================
+17. MQTT RETAINED Y POR QUE FUE NECESARIO PROTEGERLO
+======================================================================
+
+MQTT puede guardar el ultimo valor de un topic usando la opcion retained.
+
+Eso es util para estados.
+
+Ejemplo valido:
+
+  bms/SCU200/BC1/VoltageL1
+
+Pero es peligroso para comandos.
+
+Ejemplo:
+
+  bms/SCHNEIDER/TANKS/FillEVEnabledT1/write
+
+Si un comando queda retained, un cliente que se reconecta puede recibir ese
+comando viejo como si acabara de emitirse.
+
+Durante la prueba de migracion se encontraron comandos retained historicos.
+
+La solucion quedo en varias capas.
+
+Capa 1:
+  scripts/mqtt-cleanup.sh
+
+Elimina retained de:
+
+  bms/+/+/+/write
+  bms/diagnostico/comando
+
+Capa 2:
+  Command Safety Guard en Node-RED
+
+Si recibe un comando historico con msg.retain=true:
+
+  NO lo ejecuta
+  publica tombstone
+  elimina el retained
+
+Capa 3:
+  Diagnostic Command Safety Guard
+
+Aplica el mismo concepto al canal:
+
+  bms/diagnostico/comando
+
+Capa 4:
+  Todo comando nuevo se limpia del almacenamiento retained.
+
+Principio de seguridad:
+
+  UN COMANDO PERTENECE AL MOMENTO EN QUE FUE EMITIDO.
+  NO SE REINTENTA AUTOMATICAMENTE DESPUES DE UN REBOOT.
+
+======================================================================
+18. QUE ES UN TOMBSTONE MQTT
+======================================================================
+
+Para borrar un retained se publica en el mismo topic:
+
+  payload vacio
+  retain = true
+
+A ese mensaje de borrado se lo denomina aqui "tombstone".
+
+Los Safety Guard detectan payload vacio y lo ignoran para impedir loops.
+
+======================================================================
+19. SCRIPT MQTT CLEANUP
+======================================================================
+
+Archivo:
+
+  scripts/mqtt-cleanup.sh
+
+Funcion:
+
+  - espera a que Mosquitto responda
+  - borra retained de comandos /write
+  - borra retained de diagnostico
+  - no borra telemetria valida
+  - finaliza con:
+
+      MQTT COMMAND CLEANUP OK
+
+Uso dentro de la red Docker:
+
+  docker run --rm \
+    --network docker_default \
+    -e MQTT_HOST=bms-mosquitto \
+    -e MQTT_PORT=1883 \
+    -v "$PWD/scripts/mqtt-cleanup.sh:/scripts/mqtt-cleanup.sh:ro" \
+    --entrypoint /bin/sh \
+    eclipse-mosquitto:2.0 \
+    /scripts/mqtt-cleanup.sh
+
+======================================================================
+20. QUE ES RESTORE
+======================================================================
+
+Script:
+
+  scripts/restore.sh
+
+Tiene dos modos:
+
+  --check
+      valida sin modificar datos.
+
+  --restore
+      restaura los datos persistentes.
+
+Uso:
+
+  ./scripts/restore.sh BACKUP.tar.gz --check
+
+  ./scripts/restore.sh BACKUP.tar.gz --restore
+
+IMPORTANTE:
+
+  restore.sh recibe el TAR ya DESCIFRADO.
+
+El archivo .age debe descifrarse antes usando la clave privada.
+
+======================================================================
+21. QUE VALIDA RESTORE.SH
+======================================================================
+
+Entre otras cosas verifica:
+
+  Docker disponible
+  Docker Compose valido
+  imagen de Mosquitto disponible
+  TAR valido
+  rutas internas seguras
+  contenido minimo obligatorio
+  manifest no vacio
+  commit Git del backup versus commit destino
+  propietarios y permisos posteriores
+
+Tambien protege contra rutas peligrosas dentro del TAR, por ejemplo:
+
+  /ruta/absoluta
+  ../
+
+Esto evita que una extraccion mal formada escriba fuera del proyecto.
+
+======================================================================
+22. ROLLBACK AUTOMATICO
+======================================================================
+
+Antes de reemplazar datos, restore.sh preserva el estado actual en:
+
+  ~/bms-restore-rollback/AAAAMMDD-HHMMSS
+
+Si el restore falla a mitad:
+
+  intenta volver al estado anterior
+  deja los servicios detenidos
+  informa el resultado del rollback
+
+Mosquitto requiere un tratamiento especial porque:
+
+  mosquitto.db
+  UID 1883
+  GID 1883
+  permisos 600
+
+La preservacion/restauracion de Mosquitto se hace usando la imagen oficial
+como root, sin cambiar los permisos del archivo operativo de manera insegura.
+
+El rollback fue probado provocando un fallo deliberado y comparando
+SHA-256 antes y despues.
+
+======================================================================
+23. POR QUE EL RESTORE DEJA LOS SERVICIOS DETENIDOS
+======================================================================
+
+Un restore no debe arrancar automaticamente el BMS.
+
+Razones:
+
+  - hay que limpiar comandos retained antes de Node-RED
+  - hay que validar el estado
+  - evita una escritura antigua al PLC
+  - permite revisar errores antes de volver a produccion
+
+Por eso el orden de arranque es obligatorio.
+
+======================================================================
+24. ORDEN SEGURO POST-RESTORE
+======================================================================
+
+1. Iniciar solamente Mosquitto.
+
+  docker compose \
+    -f docker/docker-compose.yml \
+    up -d mosquitto
+
+2. Ejecutar mqtt-cleanup.sh.
+
+3. Verificar que no existan retained peligrosos.
+
+4. Iniciar Node-RED.
+
+5. Confirmar:
+
+  Connected to broker
+  BMS READY
+
+6. Iniciar FUXA y Nginx.
+
+7. Validar lecturas.
+
+8. Hacer una escritura segura y verificar readback.
+
+9. Confirmar nuevamente que no hay retained peligrosos.
+
+======================================================================
+25. MIGRACION ENTRE ARQUITECTURAS
+======================================================================
+
+La plataforma fue probada entre:
+
+  aarch64 / ARM64
+  x86_64 / AMD64
+
+El backup NO contiene una imagen Docker ARM para copiarla a x86.
+
+Se transfieren datos y configuracion.
+
+En el equipo destino:
+
+  Git aporta las recetas.
+  Docker descarga o construye imagenes para la arquitectura destino.
+  El backup aporta los datos persistentes.
+
+Eso es lo que permite que una Raspberry y una VM x86_64 puedan ejecutar el
+mismo Core.
+
+======================================================================
+26. POR QUE NO SE USA RENOMBRAR CONTENEDORES COMO ROLLBACK
+======================================================================
+
+Durante la prueba se comprobo que renombrar contenedores antiguos no es un
+mecanismo de rollback confiable.
+
+Docker Compose conserva labels asociados al proyecto y puede recrear o
+administrar contenedores segun esos metadatos.
+
+Politica:
+
+  NO usar docker rename como estrategia de rollback.
+
+Usar:
+
+  Git
+  backup
+  restore.sh
+  rollback de restore.sh
+  snapshot de VM cuando corresponda
+
+======================================================================
+27. RELOJ Y NTP
+======================================================================
+
+La hora correcta es critica.
+
+Afecta:
+
+  certificados TLS
+  logs
+  timestamps de alarmas
+  historicos
+  manifest de backup
+  diagnostico
+
+En la Raspberry se detecto una hora incorrecta porque NTP externo por
+UDP/123 estaba bloqueado.
+
+Politica de produccion:
+
+  usar NTP interno de la institucion
+  o permitir el acceso NTP necesario
+
+Comprobar:
+
+  timedatectl
+
+NO desactivar la validacion TLS para compensar una hora incorrecta.
+
+======================================================================
+28. OPERACION DIARIA MINIMA
+======================================================================
+
+Ver estado:
+
+  cd /home/juancasas/bms-sanatorio
+
+  docker ps \
+    --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+
+Node-RED:
+
+  docker logs --tail 100 bms-nodered
+
+FUXA:
+
+  docker logs --tail 100 bms-fuxa
+
+Mosquitto:
+
+  docker logs --tail 100 bms-mosquitto
+
+Nginx:
+
+  docker logs --tail 100 bms-nginx
+
+Git:
+
+  git status --short
+  git log -3 --oneline
+
+======================================================================
+29. QUE SIGNIFICA BMS READY
+======================================================================
+
+Node-RED publica/loguea:
+
+  ========== BMS READY ==========
+
+Esto indica que el proceso de startup del Core llego a su estado operativo.
+
+Despues de:
+
+  reboot
+  restore
+  actualizacion
+  reinicio de Node-RED
+
+se debe comprobar que aparece BMS READY.
+
+======================================================================
+30. COSAS QUE NO SE DEBEN HACER
+======================================================================
+
+NO:
+
+  actualizar FUXA sin validacion
+  borrar fuxa/appdata, fuxa/db o fuxa/images
+  borrar mosquitto/data sin backup
+  dejar la clave privada age en el servidor
+  guardar backups sin cifrar
+  usar BMS_BACKUP_ALLOW_DIRTY=true para un backup oficial
+  exponer 1880, 1881 o 1883 a la LAN
+  ejecutar Node-RED antes del cleanup tras un restore
+  confiar en docker rename como rollback
+  editar flows.json en dos hosts independientemente y luego mezclar
+  ignorar un Git status sucio antes de una migracion
+  desactivar TLS por un problema de reloj
+
+======================================================================
+31. CRITERIO DE RECUPERACION EXITOSA
+======================================================================
+
+Una recuperacion se considera completa solo si:
+
+  Git corresponde a la version esperada
+  restore.sh finalizo OK
+  Mosquitto esta running
+  mqtt-cleanup finalizo OK
+  no hay retained peligrosos
+  Node-RED esta healthy
+  Node-RED muestra BMS READY
+  FUXA funciona por Nginx
+  roles/login funcionan
+  existen lecturas reales
+  una escritura segura tiene readback correcto
+  puertos internos quedan en 127.0.0.1
+  reboot vuelve a levantar el sistema
+
+======================================================================
+32. VERSION VALIDADA AL CIERRE
+======================================================================
+
+Core:
+
+  c856dda
+
+Backup oficial:
+
+  bms-backup-20261006-075104.tar.gz.age
+
+SHA-256:
+
+  d7042947e02b413d646628fdb3b6732c28fefc29b6a000eed60b76d459f39e55
+
+Estado:
+
+  Fase 7 Deployment validada tecnicamente.

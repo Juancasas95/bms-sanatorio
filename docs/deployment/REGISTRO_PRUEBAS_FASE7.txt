@@ -1,0 +1,834 @@
+BMS SANATORIO
+REGISTRO DEFINITIVO DE PRUEBAS - FASE 7 DEPLOYMENT
+Cierre tecnico: 06/10/2026
+
+======================================================================
+1. OBJETIVO
+======================================================================
+
+Este registro documenta las pruebas realizadas para demostrar que el BMS
+puede:
+
+  - respaldarse de forma consistente
+  - cifrar el respaldo
+  - transportarse a otra maquina
+  - restaurarse
+  - migrar de ARM64 a x86_64
+  - recuperarse automaticamente ante un restore fallido
+  - arrancar de forma segura sin ejecutar comandos MQTT historicos
+  - sobrevivir a un reboot
+
+======================================================================
+2. VERSIONES DE CODIGO RELEVANTES
+======================================================================
+
+e85075a
+  Core - proteger comandos MQTT retained
+
+b8bd04d
+  Deployment - agregar restore seguro con rollback
+
+c856dda
+  Deployment - cifrar y validar backups reproducibles
+
+Core de cierre tecnico:
+
+  c856dda
+
+======================================================================
+3. PLATAFORMAS PROBADAS
+======================================================================
+
+Origen / produccion:
+
+  arquitectura: aarch64
+  host BMS
+  acceso utilizado en la transferencia final: 10.3.5.121
+
+Destino / prueba de Disaster Recovery:
+
+  Ubuntu
+  arquitectura: x86_64
+  usuario: juancasas
+  UID/GID: 1000:1000
+
+======================================================================
+4. CONTENEDORES VALIDADOS
+======================================================================
+
+bms-fuxa
+  bms-fuxa:1.3.4-rolefix1
+
+bms-nodered
+  nodered/node-red:5.0.1
+
+bms-mosquitto
+  eclipse-mosquitto:2.0
+
+bms-nginx
+  nginx:stable-alpine
+
+======================================================================
+5. BACKUP INICIAL REPRODUCIBLE
+======================================================================
+
+Se creo backup.sh para respaldar:
+
+  FUXA appdata/db/images
+  runtime relevante de Node-RED
+  Mosquitto data
+  manifest
+
+Pruebas:
+
+  creacion de TAR
+  verificacion tar -tzf
+  SHA-256
+  stop/start unicamente de servicios activos
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+6. CIFRADO AGE
+======================================================================
+
+Herramienta probada:
+
+  age 1.2.1
+
+Se genero par de claves.
+
+La clave publica se versiono en:
+
+  config/backup-age-recipient.txt
+
+La clave privada fue copiada fuera del servidor y posteriormente eliminada
+del servidor productivo.
+
+Se comprobo:
+
+  cifrado
+  descifrado
+  SHA del original/restaurado
+  comparacion byte a byte en las pruebas iniciales
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+7. HALLAZGO: CHECKSUM NO PORTABLE
+======================================================================
+
+Problema:
+
+El primer formato .sha256 incluia una ruta dependiente de la maquina origen.
+
+Consecuencia:
+
+Al mover el archivo a otra carpeta, sha256sum -c no encontraba la ruta.
+
+Correccion:
+
+La version definitiva genera el checksum desde backups/ usando basename.
+
+Formato final:
+
+  HASH  archivo.tar.gz.age
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+8. RESTORE INICIAL EN VM X86_64
+======================================================================
+
+Se realizo un restore del estado generado en ARM64 sobre una VM x86_64.
+
+Se verifico:
+
+  estructura del backup
+  FUXA
+  Node-RED runtime
+  Mosquitto
+
+Resultado:
+
+  los datos eran portables entre arquitecturas.
+
+======================================================================
+9. HALLAZGO: SERVICIOS VACIOS EN RESTORE
+======================================================================
+
+Primer restore.sh:
+
+La lista de servicios podia contener una entrada vacia.
+
+Correccion:
+
+Se filtraron lineas vacias antes de docker compose stop.
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+10. HALLAZGO: RENOMBRAR CONTENEDORES NO ES ROLLBACK
+======================================================================
+
+Se intento preservar contenedores viejos cambiandoles el nombre.
+
+Se observo que Docker Compose conservaba labels del proyecto y podia
+recrear/administrar contenedores.
+
+Conclusion:
+
+  docker rename NO es rollback.
+
+Se adopto:
+
+  rollback de datos
+  Git
+  backups
+  snapshots cuando corresponda
+
+======================================================================
+11. PRUEBA FUXA X86_64
+======================================================================
+
+La imagen personalizada FUXA 1.3.4 se reconstruyo en x86_64.
+
+Se valido:
+
+  carga del proyecto
+  login
+  roles
+  usuarios
+  pantallas
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+12. NODE-RED EN X86_64
+======================================================================
+
+En un checkout nuevo node_modules no estaba presente.
+
+Se instalaron dependencias mediante npm ci.
+
+Se verificaron nodos necesarios, incluyendo:
+
+  Modbus
+  email
+  WhatsApp
+
+Resultado:
+
+  Node-RED cargo los flows.
+
+======================================================================
+13. HALLAZGO CRITICO: MQTT RETAINED
+======================================================================
+
+Al iniciar el sistema restaurado se observaron errores que inicialmente
+parecian un problema del Startup.
+
+Con solo Mosquitto activo se inspeccionaron retained de:
+
+  bms/#
+
+Se encontraron retained historicos, incluidos comandos:
+
+  /write
+  bms/diagnostico/comando
+
+Entre los hallazgos hubo topics con:
+
+  SCHNEIDER
+  SCHENIDER
+
+y comandos antiguos del flujo de diagnostico.
+
+Conclusion:
+
+  el Startup no era la causa principal.
+  Mosquitto habia restaurado comandos antiguos.
+
+======================================================================
+14. LIMPIEZA MQTT
+======================================================================
+
+Se creo:
+
+  scripts/mqtt-cleanup.sh
+
+Limpia:
+
+  bms/+/+/+/write
+  bms/diagnostico/comando
+
+usando retained-only y remove-retained.
+
+Prueba:
+
+Despues de ejecutar el script:
+
+  OK - NO HAY COMANDOS RETAINED
+
+Telemetria retained normal siguio disponible.
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+15. SAFETY GUARD DE ESCRITURA
+======================================================================
+
+Se agrego en Node-RED:
+
+  Command Safety Guard
+
+Canal:
+
+  bms/<gateway>/<device>/<variable>/write
+
+Comportamiento probado:
+
+Comando nuevo:
+  se acepta
+  se ejecuta una vez
+  se genera tombstone
+  el retained desaparece
+
+Comando retained existente al arrancar:
+  se detecta con msg.retain=true
+  se bloquea
+  no llega al Writer
+  se elimina del broker
+
+Prueba con:
+
+  bms/TEST/TEST/TestVariable/write
+
+Resultado esperado y obtenido:
+
+  MQTT COMMAND BLOCKED - retained historico
+
+Sin:
+
+  Resolve device TEST
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+16. SAFETY GUARD DE DIAGNOSTICO
+======================================================================
+
+Se agrego:
+
+  Diagnostic Command Safety Guard
+
+Topic:
+
+  bms/diagnostico/comando
+
+Se creo un retained de prueba con Node-RED apagado.
+
+Al iniciar:
+
+  MQTT DIAGNOSTIC COMMAND BLOCKED - retained historico
+
+Despues:
+
+  NO HAY RETAINED
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+17. SUSCRIPCION DUPLICADA /WRITE
+======================================================================
+
+Se detecto una segunda suscripcion de pruebas a:
+
+  bms/+/+/+/write
+
+en la pestana:
+
+  90 - Pruebas
+
+Se elimino.
+
+Comprobacion:
+
+  cantidad /write = 1
+  cantidad diagnostico = 1
+  Command Safety Guard = 1
+  Diagnostic Command Safety Guard = 1
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+18. ESCRITURA REAL DESPUES DE SAFETY GUARD
+======================================================================
+
+Se realizo escritura real y lectura/readback de PLC.
+
+Resultado:
+
+  escritura OK
+  lectura OK
+  readback OK
+  no quedaron /write retained
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+19. PORTABILIDAD DEL CORE MEDIANTE GIT
+======================================================================
+
+Commit:
+
+  e85075a
+
+Se actualizo el host aarch64 usando:
+
+  git fetch
+  git pull --ff-only
+
+No se editaron flows manualmente en el segundo host.
+
+Se verifico:
+
+  una suscripcion /write
+  una suscripcion diagnostico
+  dos Safety Guards
+  mqtt-cleanup valido
+
+Se realizaron nuevamente:
+
+  lectura
+  escritura
+  readback
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+20. RESTORE.SH --CHECK
+======================================================================
+
+restore.sh se amplio para:
+
+  validar herramientas
+  validar Compose
+  validar TAR
+  validar rutas
+  leer manifest
+  comparar Git origen/destino
+
+Se encontro inicialmente que el parser del manifest esperaba:
+
+  Campo: valor
+
+pero el manifest tenia:
+
+  Campo:
+  valor
+
+Se corrigio.
+
+Resultado:
+
+  Hostname, branch y commit leidos correctamente.
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+21. ROLLBACK AUTOMATICO - PRIMER ENSAYO
+======================================================================
+
+Se creo un backup de prueba defectuoso eliminando:
+
+  fuxa/appdata/project.fuxap.db
+
+El objetivo era provocar un fallo despues de comenzar el restore.
+
+Primer resultado:
+
+Mosquitto no pudo preservarse con mv desde el usuario host:
+
+  Permission denied
+
+Causa:
+
+  mosquitto/data
+  UID/GID 1883:1883
+
+======================================================================
+22. ROLLBACK AUTOMATICO - CORRECCION MOSQUITTO
+======================================================================
+
+Se agrego preservacion especial de Mosquitto usando:
+
+  eclipse-mosquitto:2.0
+  --user 0:0
+
+Se repitio el restore defectuoso.
+
+El fallo ocurrio deliberadamente durante la validacion de FUXA.
+
+restore.sh ejecuto:
+
+  ROLLBACK AUTOMATICO
+
+y recupero:
+
+  FUXA
+  Node-RED runtime
+  Mosquitto
+
+======================================================================
+23. PRUEBA DE INTEGRIDAD DEL ROLLBACK
+======================================================================
+
+Se calcularon SHA-256 antes y despues para:
+
+  FUXA project.fuxap.db
+  Node-RED .config.nodes.json
+  Node-RED .config.runtime.json
+  Node-RED .config.users.json
+  Mosquitto mosquitto.db
+
+Resultado:
+
+  OK - ESTADO ANTERIOR RECUPERADO INTEGRAMENTE
+
+Los servicios quedaron detenidos.
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+24. RESTORE NORMAL CON SCRIPT HARDENED
+======================================================================
+
+Se restauro un backup valido.
+
+Resultado:
+
+  RESTORE DE DATOS OK
+
+Permisos verificados:
+
+FUXA:
+  UID/GID 1000:1000
+
+Node-RED runtime:
+  UID/GID 1000:1000
+
+Mosquitto:
+  data UID/GID 1883:1883
+  mosquitto.db 600
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+25. STARTUP SEGURO POST-RESTORE
+======================================================================
+
+Orden ejecutado:
+
+  1 Mosquitto
+  2 mqtt-cleanup
+  3 comprobar retained
+  4 Node-RED
+  5 BMS READY
+  6 FUXA + Nginx
+
+Resultado:
+
+  MQTT COMMAND CLEANUP OK
+  OK - NO HAY RETAINED PELIGROSOS
+  BMS READY
+  servicios activos
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+26. BACKUP.SH HARDENED
+======================================================================
+
+Se agregaron:
+
+  cifrado age
+  checksum portable
+  validacion de Git limpio
+  override solo para prueba
+  eliminacion automatica de plaintext
+  validacion de recipient age
+  preflight de directorio backups/
+
+======================================================================
+27. PRUEBA DE GIT SUCIO
+======================================================================
+
+Con backup.sh modificado y no commiteado se ejecuto:
+
+  ./scripts/backup.sh
+
+Resultado:
+
+  detecto Git sucio
+  aborto
+  no detuvo servicios
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+28. HALLAZGO: BACKUPS/ ROOT:ROOT
+======================================================================
+
+En la VM:
+
+  backups
+  root:root
+  modo 755
+
+El usuario no podia escribir.
+
+Se corrigio:
+
+  sudo chown juancasas:juancasas backups
+  chmod 775 backups
+
+Se anadio preflight al script para detectar el problema antes de detener
+servicios.
+
+======================================================================
+29. BACKUP CIFRADO DE PRUEBA
+======================================================================
+
+Se ejecuto con override deliberado.
+
+Resultado:
+
+  TAR creado
+  TAR verificado
+  age OK
+  SHA portable OK
+  plaintext eliminado
+  servicios restaurados
+  Node-RED volvio healthy y BMS READY
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+30. BACKUP DEFINITIVO
+======================================================================
+
+Git:
+
+  c856dda
+  CLEAN
+
+Archivo:
+
+  bms-backup-20261006-075104.tar.gz.age
+
+Tamano aproximado:
+
+  195 KB
+
+SHA-256:
+
+  d7042947e02b413d646628fdb3b6732c28fefc29b6a000eed60b76d459f39e55
+
+Se verifico:
+
+  checksum portable OK
+  no quedaron backups .tar.gz plaintext
+  clave privada no presente en servidor
+  los cuatro servicios activos
+  Node-RED healthy
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+31. TRANSFERENCIA DEL BACKUP DEFINITIVO
+======================================================================
+
+Se transfirieron desde el host BMS al Ubuntu x86_64:
+
+  bms-backup-20261006-075104.tar.gz.age
+  bms-backup-20261006-075104.tar.gz.age.sha256
+
+Origen usado:
+
+  10.3.5.121
+
+En destino:
+
+  sha256sum -c
+
+Resultado:
+
+  bms-backup-20261006-075104.tar.gz.age: OK
+
+Hash directo:
+
+  d7042947e02b413d646628fdb3b6732c28fefc29b6a000eed60b76d459f39e55
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+32. DISASTER RECOVERY FINAL
+======================================================================
+
+Sobre la VM x86_64:
+
+  backup definitivo descifrado
+  TAR validado
+  restore.sh --check OK
+  restore.sh --restore OK
+  Mosquitto iniciado primero
+  mqtt-cleanup OK
+  retained peligrosos = 0
+  Node-RED BMS READY
+  FUXA y Nginx operativos
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+33. VALIDACION FUNCIONAL FINAL
+======================================================================
+
+Se verifico:
+
+  FUXA
+  login
+  roles
+  lecturas reales
+  escritura real
+  readback
+  retained peligrosos
+  puertos
+
+Resultado reportado:
+
+  TODO OK
+
+======================================================================
+34. REBOOT FINAL
+======================================================================
+
+Se reinicio la VM recuperada.
+
+Despues del reboot se verifico:
+
+  contenedores
+  Node-RED healthy
+  BMS READY
+  Nginx
+  FUXA
+  Mosquitto
+  puertos
+  retained
+  Git
+  reloj
+  lectura funcional
+
+Resultado reportado:
+
+  TODO OK
+
+======================================================================
+35. AISLAMIENTO DE RED VALIDADO
+======================================================================
+
+Configuracion final:
+
+  Nginx 80:
+      expuesto a red
+
+  Node-RED 1880:
+      127.0.0.1
+
+  FUXA 1881:
+      127.0.0.1
+
+  Mosquitto 1883:
+      127.0.0.1
+
+Resultado:
+
+  APROBADO
+
+======================================================================
+36. CONCLUSION DE FASE 7
+======================================================================
+
+La Fase 7 demostro que el BMS:
+
+  es reproducible desde Git
+  tiene backup consistente
+  cifra sus backups
+  verifica integridad
+  no necesita conservar plaintext
+  mantiene la clave privada fuera del servidor
+  puede migrar ARM64 -> x86_64
+  puede restaurar FUXA, Node-RED y Mosquitto
+  puede volver al estado previo ante fallo de restore
+  bloquea comandos MQTT historicos
+  arranca en orden seguro
+  supera reboot
+  conserva lectura/escritura/readback
+
+Estado:
+
+  FASE 7 DEPLOYMENT
+  VALIDADA TECNICAMENTE
+
+======================================================================
+37. PENDIENTE ADMINISTRATIVO DESPUES DE ESTE REGISTRO
+======================================================================
+
+Despues de generar y revisar los manuales definitivos:
+
+  realizar commit documental
+  dejar Git limpio
+  crear release/tag estable segun decision del proyecto
+
+El tag v1.0.0 no se registra aqui como realizado hasta que efectivamente se
+cree en Git.

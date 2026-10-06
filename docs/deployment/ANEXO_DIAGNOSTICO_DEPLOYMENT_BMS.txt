@@ -1,0 +1,431 @@
+BMS SANATORIO
+ANEXO DE OPERACION Y DIAGNOSTICO PARA DEPLOYMENT
+Version documental: Fase 7 cerrada
+
+======================================================================
+1. COMO USAR ESTE ANEXO
+======================================================================
+
+Usar este documento cuando un paso del manual de backup o restauracion no
+da el resultado esperado.
+
+Regla general:
+
+  1. diagnosticar
+  2. identificar el componente afectado
+  3. preservar datos
+  4. recien despues modificar
+
+No aplicar soluciones destructivas por intuicion.
+
+======================================================================
+2. COMANDOS DE CONSULTA QUE NO MODIFICAN DATOS
+======================================================================
+
+Estado de contenedores:
+
+  docker ps
+  docker ps -a
+
+Logs:
+
+  docker logs --tail 100 bms-nodered
+  docker logs --tail 100 bms-fuxa
+  docker logs --tail 100 bms-mosquitto
+  docker logs --tail 100 bms-nginx
+
+Git:
+
+  git status --short
+  git log -3 --oneline
+  git rev-parse --short HEAD
+
+Puertos:
+
+  ss -lnt
+
+Hora:
+
+  timedatectl
+
+Archivos:
+
+  ls -la
+  stat ARCHIVO
+
+Contenido de TAR:
+
+  tar -tzf archivo.tar.gz
+
+Checksum:
+
+  sha256sum archivo
+  sha256sum -c archivo.sha256
+
+======================================================================
+3. SI NODE-RED NO LLEGA A BMS READY
+======================================================================
+
+Comprobar:
+
+  docker ps --filter name=bms-nodered
+
+Logs:
+
+  docker logs --tail 200 bms-nodered
+
+Buscar:
+
+  Connected to broker
+  BMS READY
+  error
+  No existe
+  Modbus
+
+Comprobar Mosquitto:
+
+  docker ps --filter name=bms-mosquitto
+
+No asumir que un error de startup es necesariamente un bug del Startup.
+Durante la Fase 7 se demostro que comandos retained antiguos podian generar
+errores aparentemente relacionados con dispositivos o gateways.
+
+======================================================================
+4. SI APARECEN COMANDOS RETAINED
+======================================================================
+
+NO iniciar Node-RED si se esta en un post-restore.
+
+Ejecutar mqtt-cleanup segun el manual.
+
+Topics peligrosos:
+
+  bms/+/+/+/write
+  bms/diagnostico/comando
+
+Los estados/telemetria retained no deben eliminarse indiscriminadamente.
+
+======================================================================
+5. SI MOSQUITTO NO PUEDE LEER O ESCRIBIR mosquitto.db
+======================================================================
+
+Comprobar como root dentro de la imagen:
+
+  docker run --rm \
+    --user 0:0 \
+    -v "$PWD/mosquitto/data:/data:ro" \
+    eclipse-mosquitto:2.0 \
+    sh -c 'stat -c "%a UID=%u GID=%g %n" /data /data/mosquitto.db'
+
+Esperado:
+
+  mosquitto.db
+  modo 600
+  UID=1883
+  GID=1883
+
+No hacer:
+
+  chmod 777 mosquitto.db
+
+======================================================================
+6. SI BACKUP.SH DICE PERMISSION DENIED
+======================================================================
+
+Comprobar:
+
+  stat -c '%A | %a | %U:%G | UID=%u GID=%g | %n' backups
+
+Para el entorno validado:
+
+  backups
+  juancasas:juancasas
+  775
+
+Si corresponde:
+
+  sudo chown juancasas:juancasas backups
+  chmod 775 backups
+
+======================================================================
+7. SI GIT IMPIDE EL BACKUP
+======================================================================
+
+Ejecutar:
+
+  git status --short
+
+Entender cada linea.
+
+No utilizar el override de Git sucio en un backup oficial.
+
+El override existe para pruebas:
+
+  BMS_BACKUP_ALLOW_DIRTY=true
+
+pero su uso debe quedar documentado.
+
+======================================================================
+8. SI SHA-256 FALLA
+======================================================================
+
+No restaurar.
+
+Comprobar:
+
+  archivo correcto
+  checksum correspondiente
+  transferencia completa
+
+Repetir copia.
+
+El checksum oficial usa solo basename, por lo que debe funcionar desde
+cualquier directorio que contenga ambos archivos.
+
+======================================================================
+9. SI AGE NO DESCIFRA
+======================================================================
+
+Comprobar:
+
+  age --version
+  chmod 600 bms-recovery.key
+
+Confirmar que la clave privada corresponde a la clave publica usada para
+cifrar el backup.
+
+No modificar el backup.
+No intentar reparar manualmente un .age.
+
+======================================================================
+10. SI RESTORE.SH --CHECK FALLA
+======================================================================
+
+No ejecutar --restore.
+
+Corregir primero el error.
+
+Causas posibles:
+
+  TAR invalido
+  falta manifest
+  faltan directorios obligatorios
+  Docker no disponible
+  Compose invalido
+  ruta insegura detectada
+
+======================================================================
+11. SI RESTORE.SH FALLA A MITAD
+======================================================================
+
+Leer toda la salida.
+
+Buscar:
+
+  ROLLBACK AUTOMATICO
+
+Si indica:
+
+  Rollback automatico finalizado correctamente.
+
+los datos anteriores fueron recuperados segun el mecanismo probado.
+
+Los servicios deben permanecer detenidos.
+
+Si indica rollback incompleto:
+
+  NO iniciar el BMS.
+
+Conservar:
+
+  ~/bms-restore-rollback/<timestamp>
+
+======================================================================
+12. SI FUXA NO MUESTRA EL PROYECTO
+======================================================================
+
+Comprobar:
+
+  fuxa/appdata/project.fuxap.db
+
+Permisos:
+
+  stat fuxa/appdata/project.fuxap.db
+
+Logs:
+
+  docker logs --tail 200 bms-fuxa
+
+Comprobar que se restauraron tambien:
+
+  fuxa/db
+  fuxa/images
+
+======================================================================
+13. SI FUXA FUNCIONA EN :1881 PERO NO POR PUERTO 80
+======================================================================
+
+Revisar Nginx:
+
+  docker ps --filter name=bms-nginx
+  docker logs --tail 100 bms-nginx
+
+No dejar :1881 expuesto como solucion permanente.
+
+El acceso normal debe pasar por Nginx.
+
+======================================================================
+14. SI NODE-RED O FUXA NO SON ACCESIBLES DIRECTAMENTE DESDE LA LAN
+======================================================================
+
+Esto es intencional.
+
+Puertos administrativos/internos:
+
+  1880
+  1881
+  1883
+
+estan ligados a loopback.
+
+Para administracion usar el mecanismo autorizado, por ejemplo tunel SSH.
+
+No cambiar a 0.0.0.0 solo para facilitar una prueba.
+
+======================================================================
+15. SI EL RELOJ ESTA MAL
+======================================================================
+
+  timedatectl
+
+Resolver NTP.
+
+No desactivar comprobacion TLS.
+
+Una hora incorrecta puede parecer un problema de Docker, Git o certificado.
+
+======================================================================
+16. SI DOCKER COMPOSE QUIERE RECREAR UN CONTENEDOR RENOMBRADO
+======================================================================
+
+No usar renombrado como rollback.
+
+Los labels de Compose continuan asociados.
+
+Usar el procedimiento oficial de backup/restore.
+
+======================================================================
+17. SI DESPUES DE UN BACKUP UN SERVICIO TARDA EN APARECER
+======================================================================
+
+Un "Started" de Docker no garantiza que la aplicacion ya termino de iniciar.
+
+Esperar y volver a comprobar.
+
+Mosquitto:
+
+  docker inspect bms-mosquitto \
+    --format 'Status={{.State.Status}} ExitCode={{.State.ExitCode}} RestartCount={{.RestartCount}}'
+
+Node-RED:
+
+  docker ps --filter name=bms-nodered
+
+Esperar:
+
+  healthy
+
+Luego buscar BMS READY.
+
+======================================================================
+18. SI EL BACKUP QUEDA CIFRADO PERO HAY UN .tar.gz EN CLARO
+======================================================================
+
+No considerar cerrado el backup.
+
+Listar:
+
+  find backups -maxdepth 1 -type f -name '*.tar.gz' -print
+
+Un backup oficial debe conservar solo las copias cifradas .age y sus
+.sha256, salvo que exista una excepcion institucional documentada.
+
+======================================================================
+19. SI LA CLAVE PRIVADA APARECE EN EL SERVIDOR PRODUCTIVO
+======================================================================
+
+No copiarla a Git.
+No copiarla a backups/.
+
+Despues de comprobar que existe otra copia valida bajo custodia, retirarla
+del servidor de acuerdo con la politica institucional.
+
+Comprobacion:
+
+  find /home/juancasas -type f -name 'bms-recovery.key' -print
+
+======================================================================
+20. SI UN COMANDO MQTT NUEVO NO ESCRIBE
+======================================================================
+
+Diferenciar:
+
+  comando nuevo
+  comando retained historico
+  tombstone
+
+Buscar en Node-RED:
+
+  COMMAND ACCEPTED
+  RETAINED BLOCKED
+  TOMBSTONE
+
+Si es retained historico, el bloqueo es el comportamiento correcto.
+
+Si es comando nuevo, revisar despues:
+
+  Parse Write Command
+  Resolve gateway/device/driver/variable
+  Validate Write
+  Build Modbus Write
+  salida Modbus correspondiente
+
+No desactivar el Safety Guard para resolver una falla de configuracion.
+
+======================================================================
+21. SI SE VE SCHENIDER EN UN LOG
+======================================================================
+
+La configuracion correcta usa:
+
+  SCHNEIDER
+
+Durante las pruebas aparecieron mensajes historicos con:
+
+  SCHENIDER
+
+provenientes de comandos retained antiguos.
+
+Antes de modificar gateways.json, comprobar si el mensaje viene de un
+retained restaurado.
+
+======================================================================
+22. INFORMACION QUE DEBE GUARDARSE AL ABRIR UN INCIDENTE
+======================================================================
+
+Registrar:
+
+  fecha/hora
+  hostname
+  uname -m
+  git rev-parse --short HEAD
+  git status --short
+  docker ps
+  docker compose version
+  docker --version
+  timedatectl
+  logs del contenedor afectado
+  ultimo backup conocido
+  checksum del backup
+
+No copiar contrasenas ni clave privada en el ticket.

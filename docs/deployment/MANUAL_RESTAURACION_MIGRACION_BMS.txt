@@ -1,0 +1,799 @@
+BMS SANATORIO
+MANUAL DEFINITIVO DE RESTAURACION, DISASTER RECOVERY Y MIGRACION
+Version documental: Fase 7 cerrada
+Core validado: c856dda
+
+======================================================================
+1. OBJETIVO
+======================================================================
+
+Este manual permite recuperar el BMS en:
+
+  - el mismo servidor despues de una falla
+  - una VM nueva
+  - un servidor nuevo
+  - una arquitectura diferente, por ejemplo ARM64 -> x86_64
+
+La recuperacion se basa en:
+
+  1. repositorio Git
+  2. backup cifrado
+  3. clave privada age
+  4. Docker / Docker Compose
+
+======================================================================
+2. CONCEPTO DE DISASTER RECOVERY
+======================================================================
+
+Un Disaster Recovery es la recuperacion del servicio despues de una perdida
+grave, por ejemplo:
+
+  falla de Raspberry
+  disco corrupto
+  VM perdida
+  reinstalacion de sistema operativo
+  migracion a nuevo hardware
+
+La meta no es copiar el servidor byte a byte.
+
+La meta es reconstruirlo de forma reproducible:
+
+  Git
+    + imagenes Docker correctas para la CPU
+    + datos persistentes del backup
+    = BMS recuperado
+
+======================================================================
+3. DATOS QUE SE RECONSTRUYEN Y DATOS QUE SE RESTAURAN
+======================================================================
+
+Se reconstruyen desde Git:
+
+  docker/
+  config/
+  drivers/
+  scripts/
+  nodered/flows.json
+  Dockerfile y parches de FUXA
+
+Se restauran desde backup:
+
+  fuxa/appdata
+  fuxa/db
+  fuxa/images
+
+  nodered/.config.nodes.json
+  nodered/.config.runtime.json
+  nodered/.config.users.json
+  nodered/flows_cred.json si existe
+
+  mosquitto/data
+
+IMPORTANTE:
+
+  El backup NO reemplaza nodered/flows.json.
+  flows.json viene de Git.
+
+======================================================================
+4. ARCHIVOS NECESARIOS
+======================================================================
+
+Ejemplo de backup:
+
+  bms-backup-20261006-075104.tar.gz.age
+
+Checksum:
+
+  bms-backup-20261006-075104.tar.gz.age.sha256
+
+Clave privada:
+
+  bms-recovery.key
+
+Repositorio:
+
+  bms-sanatorio
+
+Nunca subir bms-recovery.key a Git.
+
+======================================================================
+5. PREPARAR EL SERVIDOR NUEVO
+======================================================================
+
+Instalar un Ubuntu soportado por la institucion.
+
+Crear o utilizar un usuario de operacion.
+
+Ruta estandar usada durante las pruebas:
+
+  /home/juancasas/bms-sanatorio
+
+Instalar como minimo:
+
+  git
+  Docker Engine
+  Docker Compose plugin
+  age
+
+Comprobar:
+
+  git --version
+  docker --version
+  docker compose version
+  age --version
+
+El usuario debe poder usar Docker.
+
+Comprobar:
+
+  docker info
+
+Si da Permission denied, revisar pertenencia al grupo docker segun la
+politica de la institucion.
+
+======================================================================
+6. RELOJ ANTES DE HACER NADA
+======================================================================
+
+Comprobar:
+
+  timedatectl
+
+La fecha y hora deben ser correctas.
+
+Una hora incorrecta puede producir:
+
+  fallo TLS
+  logs incoherentes
+  alarmas con fecha incorrecta
+  problemas de Git/HTTPS
+  manifest incorrecto
+
+Durante el desarrollo se detecto que UDP/123 externo podia estar bloqueado.
+
+Solucion de produccion:
+
+  NTP interno o acceso NTP aprobado.
+
+NO deshabilitar validacion TLS.
+
+======================================================================
+7. CLONAR EL PROYECTO
+======================================================================
+
+Ir al home:
+
+  cd /home/juancasas
+
+Clonar:
+
+  git clone git@github.com:Juancasas95/bms-sanatorio.git
+
+Entrar:
+
+  cd /home/juancasas/bms-sanatorio
+
+Ver version:
+
+  git branch --show-current
+  git log -3 --oneline
+  git status --short
+
+Version validada de Fase 7:
+
+  c856dda
+
+======================================================================
+8. VALIDAR DOCKER COMPOSE
+======================================================================
+
+  docker compose \
+    -f docker/docker-compose.yml \
+    config
+
+No continuar si Compose informa errores.
+
+======================================================================
+9. IMAGENES DOCKER
+======================================================================
+
+Servicios estandar:
+
+  eclipse-mosquitto:2.0
+  nodered/node-red:5.0.1
+  nginx:stable-alpine
+
+FUXA:
+
+  bms-fuxa:1.3.4-rolefix1
+
+FUXA debe construirse desde el Dockerfile versionado:
+
+  docker compose \
+    -f docker/docker-compose.yml \
+    build --no-cache fuxa
+
+Descargar las demas imagenes:
+
+  docker compose \
+    -f docker/docker-compose.yml \
+    pull mosquitto nodered nginx
+
+No copiar una imagen ARM64 a x86_64.
+Docker debe obtener/construir la imagen correspondiente a la arquitectura
+del destino.
+
+======================================================================
+10. DEPENDENCIAS DE NODE-RED EN UNA INSTALACION NUEVA
+======================================================================
+
+El repositorio no necesita conservar node_modules como fuente autoritativa.
+
+Si nodered/node_modules no existe en el host nuevo, instalar las
+dependencias declaradas por el proyecto antes de ponerlo en produccion.
+
+Durante la migracion se utilizo npm ci con el lockfile del proyecto.
+
+Procedimiento de referencia:
+
+  cd /home/juancasas/bms-sanatorio
+
+  docker run --rm \
+    -v "$PWD/nodered:/data" \
+    nodered/node-red:5.0.1 \
+    sh -c 'cd /data && npm ci --omit=dev --no-audit --no-fund'
+
+Despues comprobar que los nodos requeridos cargan al iniciar Node-RED.
+
+Versiones verificadas durante la migracion incluyeron:
+
+  node-red-contrib-modbus 5.45.2
+  nodo de WhatsApp 0.1.2
+  node-red-node-email 5.2.5
+
+Si npm muestra advertencias de scripts nativos, no aprobar scripts
+desconocidos a ciegas. Verificar el paquete concreto.
+
+======================================================================
+11. COPIAR BACKUP Y CHECKSUM AL DESTINO
+======================================================================
+
+Crear una carpeta de recuperacion:
+
+  mkdir -p /home/juancasas/bms-dr-final
+  chmod 700 /home/juancasas/bms-dr-final
+
+Copiar:
+
+  .tar.gz.age
+  .tar.gz.age.sha256
+
+Ejemplo:
+
+  scp juancasas@IP_ORIGEN:/ruta/ARCHIVO.age \
+      /home/juancasas/bms-dr-final/
+
+  scp juancasas@IP_ORIGEN:/ruta/ARCHIVO.age.sha256 \
+      /home/juancasas/bms-dr-final/
+
+======================================================================
+12. VERIFICAR INTEGRIDAD ANTES DE DESCIFRAR
+======================================================================
+
+  cd /home/juancasas/bms-dr-final
+
+  sha256sum -c \
+    bms-backup-20261006-075104.tar.gz.age.sha256
+
+Debe mostrar:
+
+  bms-backup-20261006-075104.tar.gz.age: OK
+
+Si falla:
+
+  detener el procedimiento
+  volver a transferir
+  no ejecutar restore
+
+======================================================================
+13. COLOCAR TEMPORALMENTE LA CLAVE PRIVADA
+======================================================================
+
+Copiar la clave privada desde su custodia institucional a la maquina de
+recuperacion.
+
+Ejemplo:
+
+  /home/juancasas/bms-dr-final/bms-recovery.key
+
+Permisos:
+
+  chmod 600 \
+    /home/juancasas/bms-dr-final/bms-recovery.key
+
+La clave privada NO se necesita en el servidor origen para hacer backups.
+
+======================================================================
+14. DESCIFRAR
+======================================================================
+
+  cd /home/juancasas/bms-dr-final
+
+  age \
+    --decrypt \
+    -i bms-recovery.key \
+    -o bms-backup-20261006-075104.tar.gz \
+    bms-backup-20261006-075104.tar.gz.age
+
+Comprobar:
+
+  tar -tzf bms-backup-20261006-075104.tar.gz >/dev/null \
+    && echo "TAR OK"
+
+======================================================================
+15. RESTORE.SH --CHECK
+======================================================================
+
+Antes de modificar datos:
+
+  cd /home/juancasas/bms-sanatorio
+
+  ./scripts/restore.sh \
+    /home/juancasas/bms-dr-final/bms-backup-20261006-075104.tar.gz \
+    --check
+
+Este modo NO modifica el BMS.
+
+Valida:
+
+  herramientas
+  Docker
+  Compose
+  TAR
+  rutas internas
+  contenido requerido
+  manifest
+  Git origen versus Git destino
+
+Esperado:
+
+  CHECK OK
+  El backup paso todas las validaciones.
+  NO se modifico ningun archivo.
+
+Si el commit del backup no coincide con el checkout actual aparece un AVISO.
+No es necesariamente un error, pero debe entenderse y documentarse.
+
+======================================================================
+16. RESTORE REAL
+======================================================================
+
+Ejecutar:
+
+  cd /home/juancasas/bms-sanatorio
+
+  ./scripts/restore.sh \
+    /home/juancasas/bms-dr-final/bms-backup-20261006-075104.tar.gz \
+    --restore
+
+El script:
+
+  detecta servicios activos
+  los detiene
+  extrae el backup en temporal
+  preserva el estado anterior
+  restaura FUXA
+  restaura runtime Node-RED
+  restaura Mosquitto
+  normaliza propietarios/permisos
+  valida el resultado
+  deja los servicios DETENIDOS
+
+Resultado esperado:
+
+  RESTORE DE DATOS OK
+
+======================================================================
+17. ROLLBACK AUTOMATICO
+======================================================================
+
+Antes de reemplazar datos se crea:
+
+  ~/bms-restore-rollback/AAAAMMDD-HHMMSS
+
+Si ocurre un error despues de comenzar el cambio:
+
+  restore.sh intenta recuperar el estado previo.
+
+Para FUXA y Node-RED:
+
+  usa paths preservados.
+
+Para Mosquitto:
+
+  usa la imagen oficial como root porque UID/GID es 1883.
+
+Si termina correctamente:
+
+  Rollback automatico finalizado correctamente.
+
+Si el rollback queda incompleto:
+
+  NO iniciar el BMS.
+  Revisar los datos antes de cualquier maniobra.
+
+======================================================================
+18. PERMISOS ESPERADOS POST-RESTORE
+======================================================================
+
+FUXA:
+
+  propietario del usuario host.
+  En la validacion:
+      UID 1000
+      GID 1000
+
+Ejemplos:
+
+  fuxa/appdata             775
+  project.fuxap.db         644
+  fuxa/db                  775
+  fuxa/images              775
+
+Node-RED runtime:
+
+  propietario del usuario host.
+  archivos observados con modo 644.
+
+Mosquitto:
+
+  mosquitto/data           UID/GID 1883:1883
+  mosquitto.db             UID/GID 1883:1883
+  mosquitto.db             modo 600
+
+Que el nombre de usuario aparezca como UNKNOWN:UNKNOWN en el host no es un
+problema si los numeros son:
+
+  UID=1883
+  GID=1883
+
+======================================================================
+19. ORDEN DE ARRANQUE SEGURO DESPUES DE RESTORE
+======================================================================
+
+NO ejecutar directamente:
+
+  docker compose up -d
+
+El orden seguro es el siguiente.
+
+PASO 1 - Mosquitto
+
+  cd /home/juancasas/bms-sanatorio
+
+  docker compose \
+    -f docker/docker-compose.yml \
+    up -d mosquitto
+
+Esperar unos segundos.
+
+PASO 2 - MQTT cleanup
+
+  docker run --rm \
+    --network docker_default \
+    -e MQTT_HOST=bms-mosquitto \
+    -e MQTT_PORT=1883 \
+    -v "$PWD/scripts/mqtt-cleanup.sh:/scripts/mqtt-cleanup.sh:ro" \
+    --entrypoint /bin/sh \
+    eclipse-mosquitto:2.0 \
+    /scripts/mqtt-cleanup.sh
+
+Esperado:
+
+  MQTT COMMAND CLEANUP OK
+
+PASO 3 - Verificar retained peligrosos
+
+  timeout 5 \
+  docker exec bms-mosquitto \
+    mosquitto_sub \
+    -h localhost \
+    -p 1883 \
+    -t 'bms/#' \
+    -v \
+    > /tmp/bms-retained.txt || true
+
+  DANGEROUS="$(
+    awk '{print $1}' /tmp/bms-retained.txt \
+      | grep -E '(/write$|^bms/diagnostico/comando$)' \
+      | sort -u
+  )"
+
+  if [ -z "$DANGEROUS" ]; then
+      echo "OK - NO HAY RETAINED PELIGROSOS"
+  else
+      echo "ERROR - RETAINED PELIGROSOS:"
+      echo "$DANGEROUS"
+  fi
+
+No continuar con Node-RED si aparece un comando peligroso.
+
+PASO 4 - Node-RED
+
+  docker compose \
+    -f docker/docker-compose.yml \
+    up -d nodered
+
+Esperar aproximadamente 20 segundos.
+
+Comprobar:
+
+  docker logs --tail 150 bms-nodered 2>&1 \
+    | grep -E 'Connected to broker|BMS READY'
+
+Esperado:
+
+  Connected to broker
+  ========== BMS READY ==========
+
+PASO 5 - FUXA y Nginx
+
+  docker compose \
+    -f docker/docker-compose.yml \
+    up -d fuxa nginx
+
+======================================================================
+20. VALIDACION FUNCIONAL
+======================================================================
+
+Comprobar:
+
+  [ ] FUXA abre por Nginx
+  [ ] login administrador
+  [ ] login de un usuario no administrador
+  [ ] roles conservados
+  [ ] lecturas SCU200
+  [ ] lecturas Haiwell
+  [ ] lecturas Schneider TM221
+  [ ] una escritura segura
+  [ ] readback correcto
+  [ ] cero retained peligrosos
+
+======================================================================
+21. VALIDACION DE PUERTOS
+======================================================================
+
+  ss -lnt \
+    | grep -E '(:80 |:1880 |:1881 |:1883 )'
+
+Esperado:
+
+  80      accesible por red
+  1880    127.0.0.1
+  1881    127.0.0.1
+  1883    127.0.0.1
+
+Si 1880, 1881 o 1883 aparecen en 0.0.0.0, revisar Docker Compose antes de
+poner el host en produccion.
+
+======================================================================
+22. REBOOT FINAL
+======================================================================
+
+Una migracion no termina hasta probar un reboot.
+
+Antes:
+
+  git rev-parse --short HEAD
+  git status --short
+  docker ps
+  timedatectl
+
+Reiniciar:
+
+  sudo reboot
+
+Despues del reboot:
+
+  cd /home/juancasas/bms-sanatorio
+
+  uptime
+  timedatectl
+
+  docker ps \
+    --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+
+  docker logs --since 5m bms-nodered 2>&1 \
+    | grep -E 'Connected to broker|BMS READY|RETAINED'
+
+  ss -lnt \
+    | grep -E '(:80 |:1880 |:1881 |:1883 )'
+
+Verificar ademas retained peligrosos y FUXA desde navegador.
+
+======================================================================
+23. ELIMINAR PLAINTEXT Y CLAVE PRIVADA TEMPORAL
+======================================================================
+
+Despues de confirmar la recuperacion:
+
+  rm -f \
+    /home/juancasas/bms-dr-final/bms-backup-20261006-075104.tar.gz
+
+Retirar la clave privada de la maquina segun la politica institucional.
+
+Verificar:
+
+  find /home/juancasas \
+    -type f \
+    -name 'bms-recovery.key' \
+    -print
+
+En el servidor productivo no deberia quedar ninguna copia.
+
+======================================================================
+24. MIGRACION ARM64 A X86_64 VALIDADA
+======================================================================
+
+Origen validado:
+
+  aarch64 / ARM64
+  Raspberry / servidor BMS
+
+Destino validado:
+
+  Ubuntu x86_64 VM
+
+Se verifico:
+
+  transferencia
+  SHA identico
+  descifrado
+  restore
+  propietarios
+  Mosquitto UID 1883
+  startup
+  FUXA
+  Node-RED
+  MQTT
+  lectura
+  escritura
+  readback
+  reboot
+
+======================================================================
+25. PARTICULARIDAD DE MQTT RETAINED
+======================================================================
+
+Nunca confiar en que un restore de Mosquitto contiene unicamente estados
+inofensivos.
+
+mosquitto.db puede contener retained historicos.
+
+Por eso:
+
+  restaurar Mosquitto
+  iniciar solo Mosquitto
+  limpiar comandos
+  recien entonces iniciar Node-RED
+
+Ademas Node-RED contiene Safety Guards que bloquean retained historicos.
+
+Ambas defensas son necesarias.
+
+======================================================================
+26. POR QUE NO SE REINTENTAN COMANDOS VIEJOS
+======================================================================
+
+La politica adoptada es at-most-once para acciones de escritura.
+
+Si un comando fue emitido en el pasado y el sistema reinicio:
+
+  NO debe ejecutarse automaticamente.
+
+Es preferible que una orden pendiente se pierda y el operador la emita de
+nuevo, antes que ejecutar una maniobra antigua sobre un PLC.
+
+======================================================================
+27. FALLOS CONOCIDOS Y LECCIONES
+======================================================================
+
+A) MOSQUITTO PERMISSION DENIED
+
+Causa:
+  mosquitto.db pertenece a 1883:1883.
+
+Solucion:
+  restore.sh utiliza Docker/root para preservarlo y recuperarlo.
+
+B) CONTAINER RENAMED COMO BACKUP
+
+No utilizar.
+Los labels de Compose permanecen y Compose puede administrar/recrear esos
+contenedores.
+
+C) CHECKSUM CON RUTA DE ORIGEN
+
+La version definitiva utiliza basename.
+El .sha256 es portable.
+
+D) BACKUPS/ ROOT:ROOT
+
+Si el directorio no es escribible, backup.sh falla en preflight, antes de
+detener servicios.
+
+E) COMANDOS MQTT RETAINED
+
+Se encontraron retained antiguos durante la migracion.
+
+Solucion:
+
+  mqtt-cleanup.sh
+  Command Safety Guard
+  Diagnostic Command Safety Guard
+
+F) NTP BLOQUEADO
+
+Si la maquina no puede sincronizar hora, resolver NTP institucional.
+No desactivar TLS.
+
+======================================================================
+28. PROCEDIMIENTO DE EMERGENCIA RESUMIDO
+======================================================================
+
+1. Preparar host.
+2. Corregir hora/NTP.
+3. Instalar Git, Docker, Compose y age.
+4. Clonar repositorio.
+5. Checkout de version correcta.
+6. Validar Compose.
+7. Construir FUXA y obtener imagenes.
+8. Instalar dependencias Node-RED si faltan.
+9. Copiar .age + .sha256.
+10. Verificar SHA.
+11. Copiar temporalmente clave privada.
+12. Descifrar.
+13. restore.sh --check.
+14. restore.sh --restore.
+15. Iniciar Mosquitto.
+16. Ejecutar mqtt-cleanup.
+17. Confirmar cero retained peligrosos.
+18. Iniciar Node-RED.
+19. Confirmar BMS READY.
+20. Iniciar FUXA y Nginx.
+21. Probar login/roles.
+22. Probar lectura.
+23. Probar escritura segura + readback.
+24. Verificar puertos.
+25. Reboot.
+26. Revalidar.
+27. Eliminar TAR plaintext.
+28. Retirar clave privada.
+
+======================================================================
+29. CRITERIO DE EXITO
+======================================================================
+
+No declarar terminada una migracion hasta cumplir todos:
+
+  [ ] Git version correcta
+  [ ] Git limpio
+  [ ] checksum OK
+  [ ] descifrado OK
+  [ ] restore check OK
+  [ ] restore real OK
+  [ ] rollback disponible
+  [ ] Mosquitto running
+  [ ] cleanup MQTT OK
+  [ ] cero retained peligrosos
+  [ ] Node-RED healthy
+  [ ] BMS READY
+  [ ] FUXA accesible por Nginx
+  [ ] roles correctos
+  [ ] lectura correcta
+  [ ] escritura/readback correcto
+  [ ] puertos correctos
+  [ ] reloj correcto
+  [ ] reboot correcto
+  [ ] clave privada retirada
+  [ ] plaintext eliminado

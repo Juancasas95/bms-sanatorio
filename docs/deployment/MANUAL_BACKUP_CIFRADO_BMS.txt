@@ -1,0 +1,646 @@
+BMS SANATORIO
+MANUAL DEFINITIVO DE BACKUP Y CIFRADO
+Version documental: Fase 7 cerrada
+Core validado: c856dda
+Fecha de cierre tecnico: 06/10/2026
+
+======================================================================
+1. PROPOSITO
+======================================================================
+
+Este manual explica como generar, verificar, transferir y custodiar un
+backup del BMS de forma segura.
+
+Debe poder seguirlo una persona que conozca comandos Linux basicos.
+
+El objetivo es terminar con dos archivos:
+
+  bms-backup-AAAAMMDD-HHMMSS.tar.gz.age
+  bms-backup-AAAAMMDD-HHMMSS.tar.gz.age.sha256
+
+El primero contiene el backup CIFRADO.
+El segundo permite verificar su INTEGRIDAD.
+
+======================================================================
+2. QUE PROTEGE EL BACKUP
+======================================================================
+
+El backup guarda datos que cambian durante la operacion y que Git no puede
+recrear por si solo.
+
+FUXA:
+
+  fuxa/appdata
+      proyecto y configuracion persistente
+
+  fuxa/db
+      bases e historicos de FUXA
+
+  fuxa/images
+      imagenes utilizadas por el proyecto
+
+Node-RED:
+
+  nodered/.config.nodes.json
+  nodered/.config.runtime.json
+  nodered/.config.users.json
+  nodered/flows_cred.json, si existe
+
+Mosquitto:
+
+  mosquitto/data
+  incluida mosquitto.db
+
+Ademas contiene:
+
+  manifest.txt
+
+======================================================================
+3. QUE NO SE RESPALDA COMO DATO PERSISTENTE
+======================================================================
+
+No se usa este backup como sustituto de Git.
+
+Normalmente se reconstruyen desde Git:
+
+  docker/
+  config/
+  drivers/
+  scripts/
+  nodered/flows.json
+  Dockerfile de FUXA
+  parches de FUXA
+
+Tampoco es necesario respaldar como estado esencial:
+
+  node_modules
+  caches
+  logs temporales
+  imagenes Docker descargables
+
+La recuperacion correcta requiere:
+
+  Git + backup cifrado.
+
+======================================================================
+4. POR QUE SE CIFRA
+======================================================================
+
+El backup puede contener:
+
+  configuracion
+  usuarios
+  credenciales runtime
+  estructura del BMS
+  informacion historica
+
+Por ese motivo no debe quedar almacenado permanentemente como TAR sin
+cifrar.
+
+Se utiliza age.
+
+El servidor posee solamente la CLAVE PUBLICA.
+
+La CLAVE PRIVADA se guarda fuera del servidor.
+
+Consecuencia:
+
+  servidor comprometido + backup copiado
+  NO implica automaticamente acceso al contenido del backup.
+
+======================================================================
+5. ARCHIVOS DE CLAVE
+======================================================================
+
+Clave publica:
+
+  /home/juancasas/bms-sanatorio/config/backup-age-recipient.txt
+
+Esta clave puede permanecer en el proyecto.
+
+Clave privada:
+
+  bms-recovery.key
+
+La clave privada:
+
+  NO debe permanecer en el servidor BMS.
+  NO debe subirse a Git.
+  NO debe enviarse junto con el backup.
+  Debe guardarse en una ubicacion institucional segura.
+
+La perdida de la clave privada implica no poder descifrar backups antiguos.
+
+======================================================================
+6. SHA-256
+======================================================================
+
+Cada backup cifrado tiene un archivo:
+
+  .sha256
+
+Ejemplo:
+
+  bms-backup-20261006-075104.tar.gz.age.sha256
+
+Contenido:
+
+  d7042947...  bms-backup-20261006-075104.tar.gz.age
+
+SHA-256 detecta:
+
+  archivo corrupto
+  copia incompleta
+  modificacion del archivo
+  error de transferencia
+
+SHA-256 no cifra.
+
+======================================================================
+7. REQUISITOS ANTES DE HACER UN BACKUP
+======================================================================
+
+Entrar al servidor.
+
+Ir al proyecto:
+
+  cd /home/juancasas/bms-sanatorio
+
+Verificar Git:
+
+  git status --short
+
+Para un backup oficial NO debe mostrar nada.
+
+Ver version:
+
+  git log -3 --oneline
+
+Ver contenedores:
+
+  docker ps \
+    --format "table {{.Names}}\t{{.Status}}"
+
+Comprobar age:
+
+  age --version
+
+Comprobar clave publica:
+
+  cat config/backup-age-recipient.txt
+
+Comprobar que la clave privada NO este en el servidor:
+
+  if [ -f /home/juancasas/bms-recovery.key ]; then
+      echo "ATENCION - EXISTE CLAVE PRIVADA"
+  else
+      echo "OK - CLAVE PRIVADA NO PRESENTE"
+  fi
+
+======================================================================
+8. EJECUTAR EL BACKUP
+======================================================================
+
+Comando normal:
+
+  cd /home/juancasas/bms-sanatorio
+  ./scripts/backup.sh
+
+NO usar para backup oficial:
+
+  BMS_BACKUP_ALLOW_DIRTY=true ./scripts/backup.sh
+
+Ese override existe unicamente para pruebas controladas.
+
+======================================================================
+9. QUE HACE BACKUP.SH PASO A PASO
+======================================================================
+
+PASO 1 - Directorio de backup
+
+Comprueba que:
+
+  backups/
+
+sea escribible.
+
+Esto evita detener el BMS si el script no podra crear el archivo.
+
+Si aparece:
+
+  ERROR:
+  El directorio de backup no es escribible
+
+revisar:
+
+  stat -c '%A | %a | %U:%G | UID=%u GID=%g | %n' backups
+
+Configuracion validada para el usuario de operacion:
+
+  juancasas:juancasas
+  modo 775
+
+PASO 2 - age
+
+Comprueba:
+
+  comando age instalado
+  archivo publico existente
+  recipient no vacio
+  recipient utilizable
+
+PASO 3 - Git
+
+Comprueba que el repositorio este limpio.
+
+Resultado esperado:
+
+  Git status: CLEAN
+
+Si hay cambios, el backup oficial se cancela ANTES de detener servicios.
+
+PASO 4 - Detectar servicios
+
+Detecta cuales de estos servicios estan running:
+
+  mosquitto
+  nodered
+  fuxa
+  nginx
+
+Guarda esa lista.
+
+PASO 5 - Manifest
+
+Genera manifest.txt con:
+
+  fecha
+  hostname
+  commit Git
+  branch
+  Git status
+  Docker
+  Docker Compose
+  imagenes
+  servicios activos
+
+PASO 6 - Detener servicios temporalmente
+
+Solo detiene los que estaban activos.
+
+La finalidad es obtener una copia consistente de bases y runtime.
+
+PASO 7 - Mosquitto
+
+mosquitto.db pertenece a:
+
+  UID 1883
+  GID 1883
+  modo 600
+
+El usuario normal no debe alterar esos permisos.
+
+backup.sh utiliza temporalmente:
+
+  eclipse-mosquitto:2.0
+
+como root para copiar los datos hacia una carpeta temporal.
+
+PASO 8 - Crear TAR
+
+Se crea temporalmente:
+
+  bms-backup-AAAAMMDD-HHMMSS.tar.gz
+
+PASO 9 - Verificar TAR
+
+Se realiza una lectura del indice del TAR.
+
+Si el archivo no es valido, se aborta.
+
+PASO 10 - Cifrar
+
+Se utiliza age y la clave publica.
+
+Resultado:
+
+  .tar.gz.age
+
+PASO 11 - SHA portable
+
+Genera:
+
+  .tar.gz.age.sha256
+
+usando solamente el nombre del archivo, no la ruta completa.
+
+PASO 12 - Verificar SHA
+
+El script ejecuta la verificacion inmediatamente.
+
+Debe mostrar:
+
+  nombre-del-backup.age: OK
+
+PASO 13 - Eliminar plaintext
+
+El .tar.gz sin cifrar se elimina.
+
+Debe quedar:
+
+  .tar.gz.age
+  .tar.gz.age.sha256
+
+PASO 14 - Restaurar servicios
+
+El mecanismo de salida vuelve a iniciar los servicios que estaban activos
+antes del backup.
+
+Si hubo un error a mitad del proceso, elimina archivos incompletos.
+
+======================================================================
+10. SALIDA ESPERADA
+======================================================================
+
+Fragmentos principales:
+
+  Validando directorio de backup...
+  BACKUP DIR OK
+
+  Validando cifrado age...
+  AGE OK
+
+  Validando estado Git...
+  Git status: CLEAN
+
+  Detectando servicios activos...
+
+  Deteniendo temporalmente servicios...
+
+  Verificando integridad del archivo...
+
+  Cifrando backup con age...
+  CIFRADO OK
+
+  Generando SHA-256 portable...
+  Verificando SHA-256...
+  bms-backup-....tar.gz.age: OK
+
+  Backup sin cifrar eliminado.
+
+  BACKUP OK
+
+  Servicios restaurados.
+  Backup finalizado correctamente.
+
+======================================================================
+11. VERIFICACION POST-BACKUP
+======================================================================
+
+Ver archivos:
+
+  ls -lh backups/
+
+Obtener el backup mas reciente:
+
+  BACKUP="$(
+    find backups \
+      -maxdepth 1 \
+      -type f \
+      -name 'bms-backup-*.tar.gz.age' \
+      -printf '%T@ %p\n' \
+    | sort -nr \
+    | head -n1 \
+    | cut -d' ' -f2-
+  )"
+
+  CHECKSUM="${BACKUP}.sha256"
+
+  echo "$BACKUP"
+
+Verificar checksum:
+
+  (
+    cd backups
+    sha256sum -c "$(basename "${CHECKSUM}")"
+  )
+
+Resultado:
+
+  archivo.age: OK
+
+======================================================================
+12. COMPROBAR QUE NO QUEDO UN BACKUP SIN CIFRAR
+======================================================================
+
+  PLAINTEXT="$(
+    find backups \
+      -maxdepth 1 \
+      -type f \
+      -name '*.tar.gz' \
+      -print
+  )"
+
+  if [ -z "$PLAINTEXT" ]; then
+      echo "OK - NO HAY BACKUPS SIN CIFRAR"
+  else
+      echo "ERROR - EXISTEN BACKUPS SIN CIFRAR"
+      echo "$PLAINTEXT"
+  fi
+
+======================================================================
+13. COMPROBAR QUE LOS SERVICIOS VOLVIERON
+======================================================================
+
+  docker ps \
+    --format "table {{.Names}}\t{{.Status}}"
+
+Esperado:
+
+  bms-mosquitto   Up
+  bms-nodered     Up ... healthy
+  bms-fuxa        Up
+  bms-nginx       Up
+
+Node-RED:
+
+  docker logs --tail 100 bms-nodered 2>&1 \
+    | grep -E 'Connected to broker|BMS READY'
+
+Esperado:
+
+  Connected to broker
+  ========== BMS READY ==========
+
+======================================================================
+14. TRANSFERIR UN BACKUP A OTRA MAQUINA
+======================================================================
+
+Copiar siempre DOS archivos:
+
+  .age
+  .age.sha256
+
+Ejemplo desde maquina destino:
+
+  scp \
+    juancasas@IP_ORIGEN:/home/juancasas/bms-sanatorio/backups/ARCHIVO.age \
+    /home/juancasas/bms-dr-final/
+
+  scp \
+    juancasas@IP_ORIGEN:/home/juancasas/bms-sanatorio/backups/ARCHIVO.age.sha256 \
+    /home/juancasas/bms-dr-final/
+
+En destino:
+
+  cd /home/juancasas/bms-dr-final
+
+  sha256sum -c ARCHIVO.age.sha256
+
+Debe mostrar:
+
+  ARCHIVO.age: OK
+
+======================================================================
+15. DESCIFRAR PARA UNA RECUPERACION
+======================================================================
+
+La clave privada debe estar temporalmente en la maquina de recuperacion.
+
+Ejemplo:
+
+  chmod 600 /ruta/segura/bms-recovery.key
+
+  age \
+    --decrypt \
+    -i /ruta/segura/bms-recovery.key \
+    -o bms-backup-restored.tar.gz \
+    bms-backup-AAAA....tar.gz.age
+
+Comprobar TAR:
+
+  tar -tzf bms-backup-restored.tar.gz >/dev/null \
+    && echo "TAR OK"
+
+Despues continuar con:
+
+  MANUAL_RESTAURACION_MIGRACION_BMS.txt
+
+======================================================================
+16. BACKUP OFICIAL VALIDADO
+======================================================================
+
+Fecha:
+
+  06/10/2026
+
+Archivo:
+
+  bms-backup-20261006-075104.tar.gz.age
+
+SHA-256:
+
+  d7042947e02b413d646628fdb3b6732c28fefc29b6a000eed60b76d459f39e55
+
+Commit:
+
+  c856dda
+
+Validaciones realizadas:
+
+  Git CLEAN
+  cifrado OK
+  SHA portable OK
+  transferencia a x86_64 OK
+  descifrado OK
+  restore --check OK
+  restore real OK
+  arranque seguro OK
+  reboot OK
+
+======================================================================
+17. PROBLEMAS FRECUENTES
+======================================================================
+
+PROBLEMA:
+  El directorio backups es root:root y no permite escribir.
+
+Diagnostico:
+
+  stat -c '%A | %a | %U:%G | UID=%u GID=%g | %n' backups
+
+Correccion validada cuando corresponde:
+
+  sudo chown juancasas:juancasas backups
+  chmod 775 backups
+
+PROBLEMA:
+  Git esta sucio.
+
+Diagnostico:
+
+  git status --short
+
+Accion:
+
+  revisar y versionar o descartar correctamente los cambios.
+
+NO usar el override simplemente para evitar revisar el estado.
+
+PROBLEMA:
+  age no esta instalado.
+
+Accion:
+
+  instalar age de forma aprobada para el sistema operativo.
+
+PROBLEMA:
+  falta backup-age-recipient.txt.
+
+Accion:
+
+  recuperar el archivo desde Git.
+
+PROBLEMA:
+  checksum falla despues de copiar.
+
+Accion:
+
+  NO descifrar.
+  Repetir la transferencia.
+  Comprobar que .age y .sha256 pertenecen al mismo backup.
+
+======================================================================
+18. POLITICA DE CUSTODIA RECOMENDADA
+======================================================================
+
+Mantener:
+
+  1 copia en el servidor, cifrada
+  1 copia institucional fuera del servidor
+  1 clave privada guardada separadamente
+
+Nunca almacenar juntos en una ubicacion insegura:
+
+  backup cifrado + clave privada
+
+======================================================================
+19. CHECKLIST DE CIERRE
+======================================================================
+
+Antes de declarar un backup valido:
+
+  [ ] Git CLEAN
+  [ ] BACKUP DIR OK
+  [ ] AGE OK
+  [ ] BACKUP OK
+  [ ] archivo .age existente
+  [ ] archivo .sha256 existente
+  [ ] sha256sum -c = OK
+  [ ] no hay .tar.gz plaintext
+  [ ] clave privada no esta en servidor
+  [ ] Mosquitto running
+  [ ] Node-RED healthy
+  [ ] BMS READY
+  [ ] FUXA running
+  [ ] Nginx running

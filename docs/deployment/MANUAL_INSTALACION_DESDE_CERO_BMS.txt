@@ -1,0 +1,1469 @@
+BMS SANATORIO
+MANUAL DEFINITIVO DE INSTALACION DESDE CERO
+Escenario: Ubuntu Server ya instalado
+Version documental: Fase 7 cerrada
+Core funcional validado: c856dda
+
+======================================================================
+0. OBJETIVO Y ALCANCE
+======================================================================
+
+Este manual responde al siguiente escenario:
+
+  "Tengo un Ubuntu Server recién instalado y necesito instalar el BMS."
+
+Está escrito para que la instalación pueda realizarla una persona distinta
+al desarrollador original, con conocimientos básicos de Linux y redes.
+
+Este documento cubre desde el primer inicio de sesión en Ubuntu Server hasta
+que el BMS queda operativo, validado y preparado para reiniciar solo.
+
+NO explica el desarrollo interno de Node-RED ni la lógica de los PLC.
+Para entender la arquitectura, backup, cifrado, seguridad, MQTT retained y
+criterios de diseño consultar también:
+
+  MANUAL_MAESTRO_DEPLOYMENT_BMS.txt
+  MANUAL_BACKUP_CIFRADO_BMS.txt
+  MANUAL_RESTAURACION_MIGRACION_BMS.txt
+  ANEXO_DIAGNOSTICO_DEPLOYMENT_BMS.txt
+
+La instalación completa se basa en dos fuentes:
+
+  1. Git
+     Código y configuración reproducible del BMS.
+
+  2. Backup cifrado
+     Estado persistente del sistema: FUXA, runtime de Node-RED y Mosquitto.
+
+Para recuperar un BMS existente se necesitan AMBAS cosas.
+
+
+======================================================================
+1. RESULTADO FINAL ESPERADO
+======================================================================
+
+Al terminar este manual deben existir cuatro contenedores funcionando:
+
+  bms-nginx
+  bms-fuxa
+  bms-nodered
+  bms-mosquitto
+
+Estado esperado:
+
+  bms-nginx       Up
+  bms-fuxa        Up
+  bms-nodered     Up ... healthy
+  bms-mosquitto   Up
+
+Acceso de usuarios:
+
+  http://IP_DEL_SERVIDOR/
+
+Puertos esperados:
+
+  80      expuesto a la red mediante Nginx
+  1880    sólo 127.0.0.1 - Node-RED
+  1881    sólo 127.0.0.1 - FUXA
+  1883    sólo 127.0.0.1 - Mosquitto
+
+Node-RED debe llegar a:
+
+  Connected to broker
+  ========== BMS READY ==========
+
+El sistema debe conservar:
+
+  proyecto FUXA
+  usuarios y roles
+  pantallas
+  configuración Node-RED
+  lecturas Modbus
+  escrituras Modbus
+  históricos FUXA
+  estado persistente MQTT seguro
+
+
+======================================================================
+2. REQUISITOS QUE TICS / ADMINISTRACION DEBE ENTREGAR ANTES DE EMPEZAR
+======================================================================
+
+No comenzar la instalación sin disponer de lo siguiente.
+
+DATOS DE RED
+
+  [ ] IP que utilizará el nuevo servidor
+  [ ] máscara/prefijo de red
+  [ ] gateway
+  [ ] DNS
+  [ ] NTP institucional o mecanismo aprobado de sincronización horaria
+  [ ] VLAN/rutas necesarias hacia los equipos BMS
+
+IMPORTANTE:
+
+  No reutilizar la IP de un servidor antiguo mientras el servidor antiguo
+  siga conectado. TICS debe confirmar el cambio para evitar un conflicto IP.
+
+ACCESO A GIT
+
+  [ ] acceso autorizado al repositorio:
+
+      git@github.com:Juancasas95/bms-sanatorio.git
+
+  El acceso puede estar preparado mediante una clave SSH institucional o el
+  mecanismo de autenticación que defina la organización.
+
+ARCHIVOS DE RECUPERACION
+
+Para recuperar la instalación existente se necesitan:
+
+  [ ] backup .tar.gz.age
+  [ ] archivo .tar.gz.age.sha256 correspondiente
+  [ ] clave privada age bms-recovery.key
+
+Backup de cierre de Fase 7 utilizado como referencia:
+
+  bms-backup-20261006-075104.tar.gz.age
+
+SHA-256:
+
+  d7042947e02b413d646628fdb3b6732c28fefc29b6a000eed60b76d459f39e55
+
+La clave privada NO debe quedar guardada permanentemente en el servidor.
+
+
+======================================================================
+3. SUPUESTOS DEL HOST
+======================================================================
+
+Este procedimiento fue validado en Ubuntu Server x86_64 y el mismo Core fue
+probado en aarch64.
+
+La instalación de Docker soporta ambas arquitecturas, pero cada host debe
+obtener o construir imágenes Docker para SU propia arquitectura.
+
+La configuración validada utiliza un usuario de operación con:
+
+  UID 1000
+  GID 1000
+
+Antes de continuar ejecutar:
+
+  id
+  id -u
+  id -g
+
+Resultado de referencia:
+
+  uid=1000(...)
+  gid=1000(...)
+
+Si el usuario que ejecutará el BMS NO es UID/GID 1000:1000, NO continuar a
+ciegas. Node-RED utiliza bind mounts y su imagen trabaja normalmente con UID
+1000. Consultar el Manual de Deployment y validar permisos antes de poner el
+sistema en producción.
+
+En este manual se usa como ejemplo el usuario:
+
+  juancasas
+
+Ruta validada:
+
+  /home/juancasas/bms-sanatorio
+
+Si se utiliza otro usuario, reemplazar la ruta por:
+
+  /home/USUARIO/bms-sanatorio
+
+siempre que UID/GID y permisos hayan sido validados.
+
+
+======================================================================
+4. PRIMERA COMPROBACION DEL UBUNTU SERVER
+======================================================================
+
+Iniciar sesión por consola o SSH.
+
+Ejecutar:
+
+  hostname
+  uname -m
+  cat /etc/os-release
+  id
+  ip addr
+  ip route
+  df -h /
+  free -h
+
+Registrar estos datos en el ticket o acta de instalación.
+
+Comprobar que exista espacio libre suficiente.
+
+No continuar si la partición raíz está llena o casi llena.
+
+
+======================================================================
+5. CONFIGURAR ZONA HORARIA Y COMPROBAR RELOJ
+======================================================================
+
+El BMS utiliza timestamps para:
+
+  alarmas
+  históricos
+  logs
+  backups
+  certificados TLS
+  diagnóstico
+
+Configurar zona horaria:
+
+  sudo timedatectl set-timezone America/Montevideo
+
+Comprobar:
+
+  timedatectl
+
+La hora debe ser correcta.
+
+Idealmente debe mostrar sincronización activa.
+
+Si el host no logra sincronizar hora:
+
+  NO deshabilitar TLS.
+  Solicitar a TICS un NTP interno o acceso NTP aprobado.
+
+Durante la validación del proyecto se comprobó que un reloj incorrecto puede
+hacer fallar accesos HTTPS y confundir completamente el diagnóstico.
+
+
+======================================================================
+6. ACTUALIZAR INDICE DE PAQUETES E INSTALAR HERRAMIENTAS BASICAS
+======================================================================
+
+Ejecutar:
+
+  sudo apt update
+
+Instalar herramientas necesarias:
+
+  sudo apt install -y \
+    ca-certificates \
+    curl \
+    git \
+    openssh-client \
+    age \
+    netcat-openbsd
+
+Comprobar:
+
+  git --version
+  age --version
+  curl --version
+  nc -h 2>&1 | head
+
+Si apt indica que no encuentra el paquete age, comprobar que el repositorio
+Universe esté habilitado según la política del Ubuntu Server. En Ubuntu 22.04
+o posterior age está disponible como paquete de la distribución.
+
+La actualización completa del sistema operativo debe seguir la política de
+TICS. Si corresponde aplicar upgrades antes de instalar:
+
+  sudo apt upgrade
+
+Reiniciar si el sistema lo solicita y luego volver a este punto.
+
+
+======================================================================
+7. INSTALAR DOCKER ENGINE Y DOCKER COMPOSE
+======================================================================
+
+Se utiliza Docker Engine del repositorio oficial de Docker.
+
+7.1 Eliminar paquetes que puedan entrar en conflicto
+
+En una instalación nueva normalmente no habrá ninguno.
+
+Ejecutar:
+
+  for pkg in docker.io docker-doc docker-compose docker-compose-v2 \
+             podman-docker containerd runc; do
+      sudo apt-get remove -y "$pkg" 2>/dev/null || true
+  done
+
+7.2 Crear keyring e instalar la clave oficial
+
+  sudo apt update
+  sudo apt install -y ca-certificates curl
+
+  sudo install -m 0755 -d /etc/apt/keyrings
+
+  sudo curl -fsSL \
+    https://download.docker.com/linux/ubuntu/gpg \
+    -o /etc/apt/keyrings/docker.asc
+
+  sudo chmod a+r /etc/apt/keyrings/docker.asc
+
+7.3 Agregar repositorio Docker
+
+Copiar y ejecutar el siguiente bloque completo:
+
+  . /etc/os-release
+
+  printf '%s\n' \
+    'Types: deb' \
+    'URIs: https://download.docker.com/linux/ubuntu' \
+    "Suites: ${UBUNTU_CODENAME:-$VERSION_CODENAME}" \
+    'Components: stable' \
+    "Architectures: $(dpkg --print-architecture)" \
+    'Signed-By: /etc/apt/keyrings/docker.asc' \
+    | sudo tee /etc/apt/sources.list.d/docker.sources >/dev/null
+
+Comprobar el archivo creado:
+
+  cat /etc/apt/sources.list.d/docker.sources
+
+Debe contener seis campos: Types, URIs, Suites, Components, Architectures y
+Signed-By.
+
+7.4 Instalar Docker
+
+  sudo apt update
+
+  sudo apt install -y \
+    docker-ce \
+    docker-ce-cli \
+    containerd.io \
+    docker-buildx-plugin \
+    docker-compose-plugin
+
+7.5 Habilitar Docker
+
+  sudo systemctl enable --now docker
+
+Comprobar:
+
+  sudo systemctl status docker --no-pager
+
+Debe aparecer:
+
+  active (running)
+
+7.6 Prueba de Docker
+
+  sudo docker run --rm hello-world
+
+La ejecución debe terminar correctamente.
+
+ADVERTENCIA DE FIREWALL:
+
+Docker gestiona reglas de red propias. Los puertos publicados por Docker no
+deben asumirse protegidos sólo porque UFW esté activo. En este BMS la defensa
+principal es que 1880, 1881 y 1883 se publican únicamente sobre 127.0.0.1 y
+se verifica al final con ss. Si TICS requiere reglas adicionales, deben
+implementarse de acuerdo con la política Docker/iptables de la institución.
+
+
+======================================================================
+8. PERMITIR AL USUARIO OPERAR DOCKER
+======================================================================
+
+Agregar el usuario actual al grupo docker:
+
+  sudo usermod -aG docker "$USER"
+
+IMPORTANTE:
+
+El grupo docker concede privilegios equivalentes a administración del host.
+Sólo agregar usuarios autorizados.
+
+Cerrar completamente la sesión SSH y volver a entrar.
+
+Después comprobar SIN sudo:
+
+  docker info >/dev/null && echo "DOCKER OK"
+  docker compose version
+
+Resultado esperado:
+
+  DOCKER OK
+
+Si aparece Permission denied:
+
+  cerrar sesión y volver a entrar
+  comprobar:
+
+    groups
+
+Debe aparecer:
+
+  docker
+
+
+======================================================================
+9. PREPARAR ACCESO AL REPOSITORIO GIT
+======================================================================
+
+Comprobar si ya existe una clave SSH:
+
+  ls -la ~/.ssh
+
+Si TICS ya entregó una clave autorizada, instalarla según el procedimiento
+institucional.
+
+Si se debe generar una nueva clave y la política lo permite:
+
+  ssh-keygen -t ed25519 -C "bms-sanatorio"
+
+La clave pública se obtiene con:
+
+  cat ~/.ssh/id_ed25519.pub
+
+Esa clave pública debe ser autorizada en el repositorio GitHub.
+
+NO enviar ni copiar la clave privada id_ed25519 a terceros.
+
+Comprobar acceso al repositorio sin clonarlo:
+
+  git ls-remote \
+    git@github.com:Juancasas95/bms-sanatorio.git \
+    HEAD
+
+Si pide confirmar la identidad del servidor GitHub, seguir el procedimiento
+de seguridad de TICS para verificar la huella del host antes de aceptar.
+
+Si el comando devuelve un hash, el acceso está funcionando.
+
+Si devuelve:
+
+  Permission denied (publickey)
+
+NO continuar. Solicitar acceso al repositorio.
+
+
+======================================================================
+10. CLONAR EL PROYECTO
+======================================================================
+
+Ir al home:
+
+  cd "$HOME"
+
+Comprobar que no exista otro directorio con el mismo nombre:
+
+  ls -ld bms-sanatorio 2>/dev/null || true
+
+Si NO existe, clonar:
+
+  git clone \
+    git@github.com:Juancasas95/bms-sanatorio.git
+
+Entrar:
+
+  cd "$HOME/bms-sanatorio"
+
+Comprobar:
+
+  git branch --show-current
+  git log -3 --oneline
+  git status --short
+
+La rama normal es:
+
+  main
+
+Para recuperar un backup concreto conviene utilizar el commit registrado en
+su manifest.
+
+Para el backup validado de Fase 7 el Core correspondiente es:
+
+  c856dda
+
+Comprobar que ese commit existe:
+
+  git show --no-patch --oneline c856dda
+
+Si se necesita reproducir exactamente ese Core:
+
+  git checkout c856dda
+
+NOTA:
+
+Cuando exista un tag estable posterior, por ejemplo v1.0.0, el procedimiento
+de releases puede indicar utilizar ese tag. Ante duda, usar el commit indicado
+en el manifest del backup y el Manual de Deployment.
+
+
+======================================================================
+11. VALIDAR LA ESTRUCTURA DEL REPOSITORIO
+======================================================================
+
+Desde:
+
+  cd "$HOME/bms-sanatorio"
+
+Comprobar como mínimo:
+
+  test -f docker/docker-compose.yml && echo "COMPOSE OK"
+  test -f nodered/flows.json && echo "FLOWS OK"
+  test -f scripts/backup.sh && echo "BACKUP SCRIPT OK"
+  test -f scripts/restore.sh && echo "RESTORE SCRIPT OK"
+  test -f scripts/mqtt-cleanup.sh && echo "MQTT CLEANUP OK"
+  test -f config/backup-age-recipient.txt && echo "AGE PUBLIC KEY OK"
+
+Validar Compose:
+
+  docker compose \
+    -f docker/docker-compose.yml \
+    config \
+    >/dev/null \
+    && echo "DOCKER COMPOSE CONFIG OK"
+
+No continuar si Docker Compose informa errores.
+
+
+======================================================================
+12. PREPARAR DIRECTORIOS PERSISTENTES Y PERMISOS
+======================================================================
+
+Evitar que Docker cree directorios importantes como root por accidente.
+
+Ejecutar:
+
+  cd "$HOME/bms-sanatorio"
+
+  mkdir -p \
+    backups \
+    fuxa/appdata \
+    fuxa/db \
+    fuxa/images \
+    fuxa/logs \
+    mosquitto/data \
+    mosquitto/log
+
+Dar permisos al directorio de backups:
+
+  chmod 775 backups
+
+Comprobar:
+
+  stat -c '%A | %a | %U:%G | UID=%u GID=%g | %n' backups
+
+El usuario debe poder escribir:
+
+  if touch backups/.install-write-test; then
+      echo "BACKUPS ESCRIBIBLE - OK"
+      rm -f backups/.install-write-test
+  else
+      echo "ERROR - backups/ no es escribible"
+      exit 1
+  fi
+
+NO aplicar chmod 777 a mosquitto/data ni a sus bases.
+
+El restore normalizará los permisos de Mosquitto correctamente.
+
+
+======================================================================
+13. OBTENER / CONSTRUIR LAS IMAGENES DOCKER
+======================================================================
+
+Desde:
+
+  cd "$HOME/bms-sanatorio"
+
+13.1 Descargar servicios estándar
+
+  docker compose \
+    -f docker/docker-compose.yml \
+    pull mosquitto nodered nginx
+
+Imágenes validadas:
+
+  eclipse-mosquitto:2.0
+  nodered/node-red:5.0.1
+  nginx:stable-alpine
+
+13.2 Construir FUXA personalizado
+
+FUXA contiene parches versionados del proyecto y no debe reemplazarse por una
+imagen genérica sin validar.
+
+Ejecutar:
+
+  docker compose \
+    -f docker/docker-compose.yml \
+    build --no-cache fuxa
+
+Comprobar:
+
+  docker images | grep -E 'bms-fuxa|fuxa'
+
+Imagen validada en Fase 7:
+
+  bms-fuxa:1.3.4-rolefix1
+
+Si el build falla porque los parches no encuentran el patrón esperado:
+
+  DETENER la instalación.
+
+No modificar el parche para "hacerlo pasar" sin revisión técnica.
+
+
+======================================================================
+14. INSTALAR DEPENDENCIAS DE NODE-RED
+======================================================================
+
+En un clone nuevo, nodered/node_modules puede no existir.
+
+Desde la raíz del proyecto:
+
+  cd "$HOME/bms-sanatorio"
+
+Ejecutar:
+
+  docker run --rm \
+    -v "$PWD/nodered:/data" \
+    nodered/node-red:5.0.1 \
+    sh -c 'cd /data && npm ci --omit=dev --no-audit --no-fund'
+
+Esto utiliza package-lock.json para instalar versiones reproducibles.
+
+Durante la migración de Fase 7 se verificaron nodos requeridos de Modbus,
+email y WhatsApp.
+
+No aprobar scripts nativos desconocidos a ciegas si npm muestra una
+advertencia nueva. Consultar el Manual de Deployment / diagnóstico.
+
+Comprobar:
+
+  test -d nodered/node_modules \
+    && echo "NODE-RED DEPENDENCIAS OK"
+
+
+======================================================================
+15. NO ARRANCAR TODAVIA TODO EL BMS
+======================================================================
+
+En una recuperación desde backup NO ejecutar todavía:
+
+  docker compose up -d
+
+Primero se debe restaurar el estado persistente.
+
+La razón principal es seguridad MQTT:
+
+  una base Mosquitto restaurada puede contener retained antiguos.
+
+El procedimiento seguro arranca Mosquitto primero, limpia comandos y recién
+entonces inicia Node-RED.
+
+
+======================================================================
+16. COPIAR EL BACKUP DE RECUPERACION AL SERVIDOR
+======================================================================
+
+Crear una carpeta temporal protegida:
+
+  mkdir -p "$HOME/bms-install-input"
+  chmod 700 "$HOME/bms-install-input"
+
+Copiar allí:
+
+  ARCHIVO.tar.gz.age
+  ARCHIVO.tar.gz.age.sha256
+
+Puede hacerse mediante SCP, SFTP, medio externo o procedimiento institucional.
+
+Ejemplo desde otra máquina:
+
+  scp ARCHIVO.tar.gz.age \
+      USUARIO@IP_NUEVO_SERVIDOR:/home/USUARIO/bms-install-input/
+
+  scp ARCHIVO.tar.gz.age.sha256 \
+      USUARIO@IP_NUEVO_SERVIDOR:/home/USUARIO/bms-install-input/
+
+No copiar todavía la clave privada a una carpeta pública.
+
+
+======================================================================
+17. VERIFICAR SHA-256 DEL BACKUP ANTES DE DESCIFRAR
+======================================================================
+
+Entrar a la carpeta:
+
+  cd "$HOME/bms-install-input"
+
+Listar:
+
+  ls -lh
+
+Ejecutar:
+
+  sha256sum -c ARCHIVO.tar.gz.age.sha256
+
+Resultado obligatorio:
+
+  ARCHIVO.tar.gz.age: OK
+
+Si muestra FAILED:
+
+  DETENER.
+  NO descifrar.
+  NO restaurar.
+
+Repetir la transferencia y comprobar que .age y .sha256 pertenecen al mismo
+backup.
+
+
+======================================================================
+18. COPIAR TEMPORALMENTE LA CLAVE PRIVADA AGE
+======================================================================
+
+Copiar desde la custodia institucional:
+
+  bms-recovery.key
+
+hacia:
+
+  $HOME/bms-install-input/bms-recovery.key
+
+Aplicar permisos:
+
+  chmod 600 "$HOME/bms-install-input/bms-recovery.key"
+
+Comprobar:
+
+  ls -l "$HOME/bms-install-input/bms-recovery.key"
+
+La clave privada se eliminará del servidor al terminar la instalación.
+
+
+======================================================================
+19. DESCIFRAR EL BACKUP
+======================================================================
+
+Ejemplo usando el backup validado de Fase 7:
+
+  cd "$HOME/bms-install-input"
+
+  age \
+    --decrypt \
+    -i bms-recovery.key \
+    -o bms-backup-restored.tar.gz \
+    bms-backup-20261006-075104.tar.gz.age
+
+Comprobar el TAR:
+
+  tar -tzf bms-backup-restored.tar.gz >/dev/null \
+    && echo "TAR OK"
+
+No continuar si no muestra:
+
+  TAR OK
+
+
+======================================================================
+20. EJECUTAR RESTORE --CHECK
+======================================================================
+
+Este paso valida el backup SIN modificar el BMS.
+
+  cd "$HOME/bms-sanatorio"
+
+  ./scripts/restore.sh \
+    "$HOME/bms-install-input/bms-backup-restored.tar.gz" \
+    --check
+
+Debe finalizar con:
+
+  CHECK OK
+  El backup pasó todas las validaciones.
+  NO se modificó ningún archivo.
+
+El script muestra el manifest del backup.
+
+Revisar especialmente:
+
+  Hostname origen
+  Git branch
+  Git commit
+  Git destino
+
+Si aparece un AVISO por commits diferentes:
+
+  no es automáticamente un error,
+  pero debe entenderse antes de continuar.
+
+Para una recuperación exacta, preferir el commit registrado en el manifest.
+
+
+======================================================================
+21. EJECUTAR RESTORE REAL
+======================================================================
+
+Sólo después de --check OK:
+
+  cd "$HOME/bms-sanatorio"
+
+  ./scripts/restore.sh \
+    "$HOME/bms-install-input/bms-backup-restored.tar.gz" \
+    --restore
+
+El script realizará:
+
+  preservación del estado existente
+  restauración FUXA
+  restauración runtime Node-RED
+  restauración Mosquitto
+  ajuste de propietarios/permisos
+  validación posterior
+
+Debe terminar con:
+
+  RESTORE DE DATOS OK
+
+IMPORTANTE:
+
+  Los servicios quedan DETENIDOS al finalizar.
+
+Esto es correcto e intencional.
+
+No arrancar Node-RED todavía.
+
+
+======================================================================
+22. ARRANQUE SEGURO - PASO 1 - MOSQUITTO
+======================================================================
+
+Desde:
+
+  cd "$HOME/bms-sanatorio"
+
+Iniciar únicamente Mosquitto:
+
+  docker compose \
+    -f docker/docker-compose.yml \
+    up -d mosquitto
+
+Esperar unos segundos.
+
+Comprobar:
+
+  docker ps --filter name=bms-mosquitto
+
+Debe aparecer Up.
+
+
+======================================================================
+23. ARRANQUE SEGURO - PASO 2 - LIMPIAR COMANDOS MQTT RETAINED
+======================================================================
+
+Ejecutar:
+
+  docker run --rm \
+    --network docker_default \
+    -e MQTT_HOST=bms-mosquitto \
+    -e MQTT_PORT=1883 \
+    -v "$PWD/scripts/mqtt-cleanup.sh:/scripts/mqtt-cleanup.sh:ro" \
+    --entrypoint /bin/sh \
+    eclipse-mosquitto:2.0 \
+    /scripts/mqtt-cleanup.sh
+
+Resultado esperado:
+
+  Mosquitto disponible.
+  Limpiando retained de comandos /write...
+  Limpiando retained de diagnóstico...
+  MQTT COMMAND CLEANUP OK
+
+Este paso borra comandos históricos peligrosos, pero no la telemetría retained
+normal.
+
+
+======================================================================
+24. ARRANQUE SEGURO - PASO 3 - COMPROBAR QUE NO QUEDEN RETAINED PELIGROSOS
+======================================================================
+
+Ejecutar:
+
+  timeout 5 \
+  docker exec bms-mosquitto \
+    mosquitto_sub \
+    -h localhost \
+    -p 1883 \
+    -t 'bms/#' \
+    -v \
+    > /tmp/bms-install-retained.txt || true
+
+  DANGEROUS="$(
+    awk '{print $1}' /tmp/bms-install-retained.txt \
+      | grep -E '(/write$|^bms/diagnostico/comando$)' \
+      | sort -u
+  )"
+
+  if [ -z "$DANGEROUS" ]; then
+      echo "OK - NO HAY RETAINED PELIGROSOS"
+  else
+      echo "ERROR - RETAINED PELIGROSOS:"
+      echo "$DANGEROUS"
+  fi
+
+No continuar si aparece ERROR.
+
+
+======================================================================
+25. ARRANQUE SEGURO - PASO 4 - NODE-RED
+======================================================================
+
+Iniciar:
+
+  docker compose \
+    -f docker/docker-compose.yml \
+    up -d nodered
+
+Esperar aproximadamente 20 a 30 segundos.
+
+Comprobar estado:
+
+  docker ps --filter name=bms-nodered
+
+Debe llegar a:
+
+  healthy
+
+Comprobar logs:
+
+  docker logs --tail 150 bms-nodered 2>&1 \
+    | grep -E 'Connected to broker|BMS READY|No existe devices|SCHENIDER|FC Not Valid'
+
+Esperado:
+
+  Connected to broker: ... bms-mosquitto:1883
+  ========== BMS READY ==========
+
+No deberían aparecer errores repetitivos de configuración o dispositivos.
+
+
+======================================================================
+26. ARRANQUE SEGURO - PASO 5 - FUXA Y NGINX
+======================================================================
+
+Iniciar:
+
+  docker compose \
+    -f docker/docker-compose.yml \
+    up -d fuxa nginx
+
+Esperar 10 a 20 segundos.
+
+Comprobar:
+
+  docker ps \
+    --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+
+Esperado:
+
+  bms-nginx       Up
+  bms-fuxa        Up
+  bms-nodered     Up ... healthy
+  bms-mosquitto   Up
+
+
+======================================================================
+27. COMPROBAR AISLAMIENTO DE PUERTOS
+======================================================================
+
+Ejecutar:
+
+  ss -lnt \
+    | grep -E '(:80 |:1880 |:1881 |:1883 )'
+
+Configuración validada:
+
+  puerto 80:
+      accesible por red mediante Nginx
+
+  puerto 1880:
+      127.0.0.1
+
+  puerto 1881:
+      127.0.0.1
+
+  puerto 1883:
+      127.0.0.1
+
+Si 1880, 1881 o 1883 aparecen publicados en 0.0.0.0:
+
+  NO poner el servidor en producción.
+  Revisar docker/docker-compose.yml y el Manual de Deployment.
+
+
+======================================================================
+28. COMPROBAR NGINX LOCALMENTE
+======================================================================
+
+Desde el servidor:
+
+  curl -I http://127.0.0.1/
+
+Debe responder HTTP.
+
+Luego, desde una PC de la misma red autorizada, abrir:
+
+  http://IP_DEL_SERVIDOR/
+
+El acceso normal al BMS debe realizarse por Nginx.
+
+No utilizar :1881 como URL normal de usuario.
+
+
+======================================================================
+29. VALIDAR FUXA
+======================================================================
+
+Desde navegador:
+
+  [ ] abre la interfaz
+  [ ] aparece el proyecto correcto
+  [ ] login administrador funciona
+  [ ] login de usuario no administrador funciona
+  [ ] roles/restricciones se conservan
+  [ ] pantallas cargan
+  [ ] gauges/estados reciben valores
+
+Roles del proyecto:
+
+  BMS_VIEWER
+  OPERATOR
+  MAINTENANCE
+  ADMIN
+
+Si el proyecto aparece vacío:
+
+  NO recrearlo manualmente.
+  Revisar restore y fuxa/appdata antes de cambiar nada.
+
+
+======================================================================
+30. VALIDAR CONECTIVIDAD HACIA EQUIPOS BMS
+======================================================================
+
+Los equipos principales validados incluyen:
+
+  Haiwell:
+      10.3.5.107 puerto TCP 502
+
+  Schneider TM221:
+      10.0.21.200 puerto TCP 502
+
+  ABB SCU200:
+      172.16.252.244 puerto TCP 502
+
+Probar conectividad TCP:
+
+  nc -vz 10.3.5.107 502
+  nc -vz 10.0.21.200 502
+  nc -vz 172.16.252.244 502
+
+Si alguno falla:
+
+  revisar IP del servidor
+  revisar rutas
+  revisar VLAN
+  revisar firewall
+  consultar TICS
+
+No cambiar las IP de equipos en el BMS sólo porque una prueba de red falla.
+
+
+======================================================================
+31. VALIDACION FUNCIONAL
+======================================================================
+
+Desde FUXA comprobar:
+
+  [ ] lecturas SCU200
+  [ ] lecturas Haiwell
+  [ ] lecturas Schneider TM221
+
+Realizar una única escritura segura sobre una variable autorizada para prueba.
+
+No utilizar una maniobra de riesgo sólo para validar la instalación.
+
+Comprobar readback:
+
+  valor escrito
+  valor leído posteriormente
+
+Deben coincidir según la variable y la lógica del PLC.
+
+Después comprobar otra vez retained peligrosos con el procedimiento del
+capítulo 24.
+
+Debe mostrar:
+
+  OK - NO HAY RETAINED PELIGROSOS
+
+
+======================================================================
+32. REINICIO COMPLETO DEL SERVIDOR
+======================================================================
+
+Una instalación no se considera terminada hasta superar un reboot.
+
+Antes:
+
+  cd "$HOME/bms-sanatorio"
+
+  git rev-parse --short HEAD
+  git status --short
+  docker ps
+  timedatectl
+
+Reiniciar:
+
+  sudo reboot
+
+Esperar a que el host vuelva.
+
+Entrar nuevamente por SSH.
+
+Comprobar:
+
+  uptime
+  timedatectl
+
+  docker ps \
+    --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+
+Esperar a que Node-RED muestre healthy.
+
+Comprobar logs:
+
+  docker logs --since 5m bms-nodered 2>&1 \
+    | grep -E 'Connected to broker|BMS READY|RETAINED|No existe devices|SCHENIDER|FC Not Valid'
+
+Esperado:
+
+  Connected to broker
+  ========== BMS READY ==========
+
+Comprobar FUXA desde navegador otra vez.
+
+NOTA IMPORTANTE:
+
+El cleanup manual es obligatorio después de un RESTORE antes del primer
+arranque de Node-RED.
+
+En un reboot normal, los Safety Guards de Node-RED protegen contra replay de
+comandos retained históricos. El reboot final fue validado en Fase 7.
+
+
+======================================================================
+33. ELIMINAR MATERIAL SENSIBLE TEMPORAL
+======================================================================
+
+Después de confirmar que el BMS funciona:
+
+Eliminar el TAR descifrado:
+
+  rm -f "$HOME/bms-install-input/bms-backup-restored.tar.gz"
+
+Eliminar la clave privada del servidor:
+
+  rm -f "$HOME/bms-install-input/bms-recovery.key"
+
+Comprobar que no quedó otra copia:
+
+  find "$HOME" \
+    -type f \
+    -name 'bms-recovery.key' \
+    -print
+
+Resultado esperado:
+
+  ninguna salida
+
+El backup .age y su .sha256 pueden conservarse según la política de backup,
+porque están cifrados.
+
+
+======================================================================
+34. GENERAR UN BACKUP NUEVO DEL SERVIDOR YA INSTALADO
+======================================================================
+
+Antes de hacerlo:
+
+  cd "$HOME/bms-sanatorio"
+  git status --short
+
+Debe estar limpio.
+
+Ejecutar:
+
+  ./scripts/backup.sh
+
+Debe mostrar:
+
+  BACKUP DIR OK
+  AGE OK
+  Git status: CLEAN
+  CIFRADO OK
+  archivo.age: OK
+  Backup sin cifrar eliminado.
+  BACKUP OK
+  Backup finalizado correctamente.
+
+Después verificar el archivo generado según:
+
+  MANUAL_BACKUP_CIFRADO_BMS.txt
+
+Este backup nuevo demuestra que el servidor instalado también puede cumplir
+su ciclo normal de operación y recuperación.
+
+
+======================================================================
+35. CHECKLIST FINAL DE ENTREGA
+======================================================================
+
+No entregar el servidor como "instalado" hasta marcar todo:
+
+SISTEMA OPERATIVO
+
+  [ ] hostname registrado
+  [ ] IP correcta
+  [ ] gateway/DNS correctos
+  [ ] hora correcta
+  [ ] NTP resuelto
+  [ ] espacio libre suficiente
+
+DOCKER
+
+  [ ] Docker running
+  [ ] Docker habilitado al inicio
+  [ ] usuario autorizado en grupo docker
+  [ ] docker compose funciona
+
+GIT
+
+  [ ] repositorio clonado
+  [ ] versión/commit esperado
+  [ ] git status limpio
+
+BMS
+
+  [ ] FUXA construido
+  [ ] dependencias Node-RED instaladas
+  [ ] backup verificado
+  [ ] backup descifrado
+  [ ] restore --check OK
+  [ ] restore real OK
+  [ ] MQTT cleanup OK
+  [ ] cero retained peligrosos
+  [ ] Node-RED healthy
+  [ ] BMS READY
+  [ ] FUXA accesible por Nginx
+  [ ] login correcto
+  [ ] roles correctos
+  [ ] lecturas correctas
+  [ ] escritura/readback correctos
+
+SEGURIDAD
+
+  [ ] 1880 sólo loopback
+  [ ] 1881 sólo loopback
+  [ ] 1883 sólo loopback
+  [ ] clave privada eliminada del servidor
+  [ ] no quedó TAR descifrado
+
+REBOOT
+
+  [ ] reboot realizado
+  [ ] cuatro contenedores vuelven
+  [ ] Node-RED vuelve healthy
+  [ ] BMS READY después del reboot
+  [ ] FUXA funciona después del reboot
+
+BACKUP NUEVO
+
+  [ ] backup del nuevo servidor generado
+  [ ] .age OK
+  [ ] .sha256 OK
+  [ ] sin plaintext
+
+
+======================================================================
+36. COMANDOS RAPIDOS DE ESTADO
+======================================================================
+
+Entrar al proyecto:
+
+  cd "$HOME/bms-sanatorio"
+
+Contenedores:
+
+  docker ps \
+    --format "table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}"
+
+Node-RED:
+
+  docker logs --tail 100 bms-nodered
+
+FUXA:
+
+  docker logs --tail 100 bms-fuxa
+
+Mosquitto:
+
+  docker logs --tail 100 bms-mosquitto
+
+Nginx:
+
+  docker logs --tail 100 bms-nginx
+
+Git:
+
+  git status --short
+  git log -3 --oneline
+
+Reloj:
+
+  timedatectl
+
+Puertos:
+
+  ss -lnt | grep -E '(:80 |:1880 |:1881 |:1883 )'
+
+
+======================================================================
+37. SI ALGO FALLA
+======================================================================
+
+No improvisar cambios en producción.
+
+Consultar en este orden:
+
+  1. salida exacta del comando que falló
+  2. ANEXO_DIAGNOSTICO_DEPLOYMENT_BMS.txt
+  3. MANUAL_MAESTRO_DEPLOYMENT_BMS.txt
+  4. MANUAL_RESTAURACION_MIGRACION_BMS.txt
+
+Guardar antes de modificar:
+
+  hostname
+  uname -m
+  git rev-parse --short HEAD
+  git status --short
+  docker ps -a
+  docker --version
+  docker compose version
+  timedatectl
+  logs del contenedor afectado
+
+NO incluir contraseñas ni la clave privada age en tickets o capturas.
+
+
+======================================================================
+38. REFERENCIAS DEL SOFTWARE BASE
+======================================================================
+
+Docker Engine:
+
+  Documentación oficial de instalación para Ubuntu de Docker.
+
+Docker Compose:
+
+  Docker Compose Plugin instalado desde el repositorio oficial de Docker.
+
+age:
+
+  age está disponible como paquete en Ubuntu 22.04 o posterior.
+
+Las versiones de imágenes del BMS están definidas por el repositorio y deben
+respetarse aunque exista una versión más nueva disponible en Internet.
+
+
+======================================================================
+39. RESUMEN CONCEPTUAL PARA EL INSTALADOR
+======================================================================
+
+La secuencia completa es:
+
+  Ubuntu listo
+      |
+      v
+  hora + red correctas
+      |
+      v
+  instalar herramientas
+      |
+      v
+  instalar Docker + Compose
+      |
+      v
+  habilitar usuario Docker
+      |
+      v
+  clonar Git
+      |
+      v
+  validar Compose
+      |
+      v
+  descargar/construir imágenes
+      |
+      v
+  instalar dependencias Node-RED
+      |
+      v
+  copiar backup + checksum
+      |
+      v
+  verificar SHA-256
+      |
+      v
+  copiar clave privada temporal
+      |
+      v
+  descifrar
+      |
+      v
+  restore --check
+      |
+      v
+  restore --restore
+      |
+      v
+  Mosquitto SOLO
+      |
+      v
+  MQTT cleanup
+      |
+      v
+  confirmar cero retained peligrosos
+      |
+      v
+  Node-RED
+      |
+      v
+  BMS READY
+      |
+      v
+  FUXA + Nginx
+      |
+      v
+  pruebas funcionales
+      |
+      v
+  reboot
+      |
+      v
+  eliminar plaintext + clave privada
+      |
+      v
+  backup nuevo
+      |
+      v
+  ENTREGA
+
+FIN DEL MANUAL
