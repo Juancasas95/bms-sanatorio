@@ -7,15 +7,45 @@
 
   "notifications": {
     "whatsapp": {
-      "enabled": false
+        "enabled": true,
+
+        "qr": {
+            "enabled": true,
+            "recipients": [
+                {
+                    "name": "Guardia Mantenimiento",
+                    "phone": "59892626767"
+                },
+		{
+                    "name": "Mantenimiento",
+                    "phone": "59894405333"
+                }
+            ]
+        },
+
+        "cloud": {
+            "enabled": true,
+            "environment": "test",
+            "apiVersion": "v25.0",
+            "phoneNumberId": "1439148929271406",
+            "recipients": [
+                {
+                    "name": "Mantenimiento",
+                    "phone": "59894405333"
+                }
+            ]
+        }
     },
 
     "email": {
-      "enabled": false
+        "enabled": true,
+        "recipients": [
+            "mercolux@semm-mautone.com.uy"
+        ]
     },
 
     "telegram": {
-      "enabled": false
+        "enabled": false
     }
   }
 }

@@ -72,7 +72,10 @@
       "type": "bool",
       "scan": 1000,
       "read": true,
-      "write": false
+      "write": false,
+      "alarm": true,
+      "severity": "CRITICAL",
+      "message": "Presión Baja en el Tanque de Aire Médico"
     },
 
       "AlarmAirTankHighPressure": {
@@ -82,8 +85,11 @@
       "quantity": 1,
       "type": "bool",
       "scan": 1000,
-	      "read": true,
-      "write": false
+      "read": true,
+      "write": false,
+      "alarm": true,
+      "severity": "CRITICAL",
+      "message": "Presión Alta en el Tanque de Aire Médico"
     },
 
      "AlarmAirColectorLowPressure": {
@@ -94,7 +100,10 @@
       "type": "bool",
       "scan": 1000,
       "read": true,
-      "write": false
+      "write": false,
+      "alarm": true,
+      "severity": "CRITICAL",
+      "message": "Presión Baja en el colector de Aire Médico"
     },
 
      "AlarmAirColectorHighPressure": {
@@ -105,7 +114,10 @@
       "type": "bool",
       "scan": 1000,
       "read": true,
-      "write": false
+      "write": false,
+      "alarm": true,
+      "severity": "CRITICAL",
+      "message": "Presión Alta en el colector de Aire Médico"
     },
 
     "Compressor1Operative": {
@@ -228,7 +240,7 @@
       "read": true,
       "write": false,
       "alarm": true,
-      "severity": "CRITICAL",
+      "severity": "WARNING",
       "message": "Se detectó una alarma en la sala de compresores"
     },
 
@@ -284,7 +296,10 @@
       "type": "bool",
       "scan": 1000,
       "read": true,
-      "write": false
+      "write": false,
+      "alarm": true,
+      "severity": "CRITICAL",
+      "message": "Presión Baja en el tanque de Vacío"
     },
 
     "AlarmHighVacuumPressure": {
@@ -295,7 +310,10 @@
       "type": "bool",
       "scan": 1000,
       "read": true,
-      "write": false
+      "write": false,
+      "alarm": true,
+      "severity": "CRITICAL",
+      "message": "Presión Alta en el tanque de Vacío"
     },
 
     "AlarmFaultVacuumSensor": {
@@ -306,7 +324,10 @@
       "type": "bool",
       "scan": 1000,
       "read": true,
-      "write": false
+      "write": false,
+      "alarm": true,
+      "severity": "CRITICAL",
+      "message": "Falla en el sensor de Vacío"
     },
 
     "AlarmPerfVacuumPump1": {
@@ -341,7 +362,7 @@
       "read": true,
       "write": false,
       "alarm": true,
-      "severity": "CRITICAL",
+      "severity": "WARNING",
       "message": "Se detectó una alarma en la sala de compresores"
     },
 

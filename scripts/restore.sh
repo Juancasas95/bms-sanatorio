@@ -863,8 +863,27 @@ preserve_path "nodered/.config.runtime.json"
 preserve_path "nodered/.config.users.json"
 preserve_path "nodered/flows_cred.json"
 
-preserve_mosquitto_data
 
+# ============================================================
+# SESIÓN WHATSAPP QR
+# ============================================================
+#
+# Sólo reemplazamos la sesión actual si el backup contiene
+# una sesión WhatsApp.
+#
+# Esto mantiene compatibilidad con backups antiguos que
+# todavía no incluían nodered/whatsapp-api.
+#
+# ============================================================
+
+if [[ -d "${TMP_DIR}/nodered/whatsapp-api" ]]; then
+
+    preserve_path "nodered/whatsapp-api"
+
+fi
+
+
+preserve_mosquitto_data
 
 echo
 echo "Rollback disponible en:"
@@ -945,6 +964,40 @@ for file in "${NODE_RED_FILES[@]}"; do
 
 done
 
+# ============================================================
+# RESTAURAR SESIÓN WHATSAPP QR
+# ============================================================
+#
+# Baileys almacena las credenciales de vinculación dentro de:
+#
+#   nodered/whatsapp-api/<config-id>/auth/
+#
+# Esta información proviene exclusivamente del backup cifrado.
+#
+# ============================================================
+
+if [[ -d "${TMP_DIR}/nodered/whatsapp-api" ]]; then
+
+    echo "Restaurando: whatsapp-api/"
+
+
+    rm -rf \
+        "${PROJECT_ROOT}/nodered/whatsapp-api"
+
+
+    cp -a \
+        "${TMP_DIR}/nodered/whatsapp-api" \
+        "${PROJECT_ROOT}/nodered/"
+
+
+    chown -R \
+        "${HOST_UID}:${HOST_GID}" \
+        "${PROJECT_ROOT}/nodered/whatsapp-api"
+
+
+    echo "Sesión WhatsApp QR restaurada."
+
+fi
 
 echo "NODE-RED OK"
 
@@ -1066,6 +1119,52 @@ do
 
 done
 
+# ============================================================
+# VALIDAR SESIÓN WHATSAPP QR
+# ============================================================
+
+if [[ -d "${PROJECT_ROOT}/nodered/whatsapp-api" ]]; then
+
+    echo
+    echo "WHATSAPP QR:"
+
+
+    stat \
+        -c '%A | %a | %U:%G | UID=%u GID=%g | %n' \
+        "${PROJECT_ROOT}/nodered/whatsapp-api"
+
+
+    WHATSAPP_UID="$(
+        stat -c '%u' \
+            "${PROJECT_ROOT}/nodered/whatsapp-api"
+    )"
+
+
+    WHATSAPP_GID="$(
+        stat -c '%g' \
+            "${PROJECT_ROOT}/nodered/whatsapp-api"
+    )"
+
+
+    if [[ "${WHATSAPP_UID}" != "${HOST_UID}" ]]; then
+
+        fail \
+            "WhatsApp QR tiene UID incorrecto: ${WHATSAPP_UID}"
+
+    fi
+
+
+    if [[ "${WHATSAPP_GID}" != "${HOST_GID}" ]]; then
+
+        fail \
+            "WhatsApp QR tiene GID incorrecto: ${WHATSAPP_GID}"
+
+    fi
+
+
+    echo "Sesión WhatsApp QR OK"
+
+fi
 
 echo
 echo "MOSQUITTO:"

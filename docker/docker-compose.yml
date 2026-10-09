@@ -25,7 +25,14 @@ services:
       - ../backups:/backups
 
     environment:
-      - TZ=America/Montevideo #configura la zona horaria
+      TZ: America/Montevideo
+
+      HTTP_PROXY: "http://10.0.1.32:8080"
+      HTTPS_PROXY: "http://10.0.1.32:8080"
+
+      NO_PROXY: "localhost,127.0.0.1,bms-mosquitto,bms-fuxa,bms-nginx"
+
+      NODE_USE_ENV_PROXY: "1"
 
     ulimits:
       core:

@@ -202,14 +202,6 @@
         "showLogs": true
     },
     {
-        "id": "b2f4d7c2e9b00102",
-        "type": "whatsapp-api-config",
-        "dataDir": "",
-        "name": "My WhatsApp",
-        "reconnectMaxMs": "30000",
-        "reconnectMinMs": "2000"
-    },
-    {
         "id": "da1e436042e4e58d",
         "type": "modbus-client",
         "name": "Schneider",
@@ -238,6 +230,37 @@
         "showErrors": false,
         "showWarnings": true,
         "showLogs": true
+    },
+    {
+        "id": "f36b855e16b49416",
+        "type": "http proxy",
+        "name": "semm-mautone",
+        "url": "http://10.0.1.32:8080",
+        "noproxy": []
+    },
+    {
+        "id": "ee5f341e885cdf51",
+        "type": "whatsapp-api-config",
+        "dataDir": "",
+        "name": "",
+        "reconnectMaxMs": 30000,
+        "reconnectMinMs": 2000
+    },
+    {
+        "id": "166a5407c89bda20",
+        "type": "whatsapp-api-config",
+        "dataDir": "",
+        "name": "",
+        "reconnectMaxMs": 30000,
+        "reconnectMinMs": 2000
+    },
+    {
+        "id": "b2f4d7c2e9b00102",
+        "type": "whatsapp-api-config",
+        "dataDir": "",
+        "name": "My WhatsApp",
+        "reconnectMaxMs": "30000",
+        "reconnectMinMs": "2000"
     },
     {
         "id": "9b9982ad2806f380",
@@ -616,7 +639,7 @@
         "type": "function",
         "z": "548bfb93b2adf834",
         "name": "Store system",
-        "func": "// ======================================================\n// STORE SYSTEM CONFIG\n// ======================================================\n//\n// RESPONSABILIDAD:\n//\n// - Parsear /config/system.json\n// - Validar estructura básica\n// - Guardar configuración en:\n//\n//       global.systemConfig\n//\n// - Reportar resultado al Startup Coordinator\n//\n// ======================================================\n\n\nconst component =\n    \"system\";\n\n\ntry {\n\n    // ==================================================\n    // 1. PARSEAR JSON\n    // ==================================================\n\n    const systemConfig =\n        JSON.parse(\n            msg.payload\n        );\n\n\n    // ==================================================\n    // 2. VALIDACIÓN BASE\n    // ==================================================\n\n    if (\n        !systemConfig ||\n        typeof systemConfig !== \"object\" ||\n        Array.isArray(systemConfig)\n    ) {\n\n        throw new Error(\n            \"system.json no contiene un objeto JSON válido.\"\n        );\n    }\n\n\n    // ==================================================\n    // 3. VALIDAR SCAN\n    // ==================================================\n\n    if (\n        !systemConfig.scan ||\n        typeof systemConfig.scan !== \"object\" ||\n        Array.isArray(systemConfig.scan)\n    ) {\n\n        throw new Error(\n            \"system.json: falta configuración scan.\"\n        );\n    }\n\n\n    const scanKeys = [\n        \"fast\",\n        \"normal\",\n        \"slow\"\n    ];\n\n\n    for (\n        const key\n        of scanKeys\n    ) {\n\n        const value =\n            Number(\n                systemConfig.scan[key]\n            );\n\n\n        if (\n            !Number.isFinite(value) ||\n            value <= 0\n        ) {\n\n            throw new Error(\n                `system.json: scan.${key} inválido.`\n            );\n        }\n    }\n\n\n    // ==================================================\n    // 4. VALIDAR NOTIFICATIONS\n    // ==================================================\n\n    if (\n        !systemConfig.notifications ||\n        typeof systemConfig.notifications !== \"object\" ||\n        Array.isArray(systemConfig.notifications)\n    ) {\n\n        throw new Error(\n            \"system.json: falta configuración notifications.\"\n        );\n    }\n\n\n    const channels = [\n        \"whatsapp\",\n        \"email\",\n        \"telegram\"\n    ];\n\n\n    for (\n        const channel\n        of channels\n    ) {\n\n        const config =\n            systemConfig.notifications[channel];\n\n\n        if (\n            !config ||\n            typeof config !== \"object\" ||\n            Array.isArray(config)\n        ) {\n\n            throw new Error(\n                `system.json: falta notifications.${channel}.`\n            );\n        }\n\n\n        if (\n            typeof config.enabled !== \"boolean\"\n        ) {\n\n            throw new Error(\n                `system.json: notifications.${channel}.enabled ` +\n                `debe ser boolean.`\n            );\n        }\n    }\n\n\n    // ==================================================\n    // 5. GUARDAR CONFIGURACIÓN\n    // ==================================================\n\n    global.set(\n        \"systemConfig\",\n        systemConfig\n    );\n\n\n    // ==================================================\n    // 6. ESTADO VISUAL\n    // ==================================================\n\n    node.status({\n\n        fill:\n            \"green\",\n\n        shape:\n            \"dot\",\n\n        text:\n            \"SYSTEM CONFIG OK\"\n\n    });\n\n\n    // ==================================================\n    // 7. EVENTO STARTUP\n    // ==================================================\n\n    msg.startupEvent = {\n\n        component:\n            component,\n\n        ok:\n            true,\n\n        count:\n            1,\n\n        error:\n            null,\n\n        timestamp:\n            new Date().toISOString()\n\n    };\n\n\n    msg.payload =\n        systemConfig;\n\n\n    return msg;\n\n\n}\ncatch (err) {\n\n\n    // ==================================================\n    // ERROR\n    // ==================================================\n\n    global.set(\n        \"systemConfig\",\n        null\n    );\n\n\n    node.status({\n\n        fill:\n            \"red\",\n\n        shape:\n            \"ring\",\n\n        text:\n            \"ERROR\"\n\n    });\n\n\n    msg.startupEvent = {\n\n        component:\n            component,\n\n        ok:\n            false,\n\n        count:\n            0,\n\n        error:\n            err.message,\n\n        timestamp:\n            new Date().toISOString()\n\n    };\n\n\n    msg.payload =\n        null;\n\n\n    return msg;\n}",
+        "func": "// ======================================================\n// STORE SYSTEM CONFIG\n// ======================================================\n//\n// RESPONSABILIDAD:\n//\n// - Parsear /config/system.json\n// - Validar estructura básica\n// - Validar configuración de notificaciones\n// - Guardar configuración en:\n//\n//       global.systemConfig\n//\n// - Reportar resultado al Startup Coordinator\n//\n// ======================================================\n\n\nconst component =\n    \"system\";\n\n\ntry {\n\n    // ==================================================\n    // 1. PARSEAR JSON\n    // ==================================================\n\n    const systemConfig =\n        JSON.parse(\n            msg.payload\n        );\n\n\n    // ==================================================\n    // 2. VALIDACIÓN BASE\n    // ==================================================\n\n    if (\n        !systemConfig ||\n        typeof systemConfig !== \"object\" ||\n        Array.isArray(systemConfig)\n    ) {\n\n        throw new Error(\n            \"system.json no contiene un objeto JSON válido.\"\n        );\n    }\n\n\n    // ==================================================\n    // 3. VALIDAR SCAN\n    // ==================================================\n\n    if (\n        !systemConfig.scan ||\n        typeof systemConfig.scan !== \"object\" ||\n        Array.isArray(systemConfig.scan)\n    ) {\n\n        throw new Error(\n            \"system.json: falta configuración scan.\"\n        );\n    }\n\n\n    const scanKeys = [\n        \"fast\",\n        \"normal\",\n        \"slow\"\n    ];\n\n\n    for (\n        const key\n        of scanKeys\n    ) {\n\n        const value =\n            Number(\n                systemConfig.scan[key]\n            );\n\n\n        if (\n            !Number.isFinite(value) ||\n            value <= 0\n        ) {\n\n            throw new Error(\n                `system.json: scan.${key} inválido.`\n            );\n        }\n    }\n\n\n    // ==================================================\n    // 4. VALIDAR NOTIFICATIONS\n    // ==================================================\n\n    if (\n        !systemConfig.notifications ||\n        typeof systemConfig.notifications !== \"object\" ||\n        Array.isArray(systemConfig.notifications)\n    ) {\n\n        throw new Error(\n            \"system.json: falta configuración notifications.\"\n        );\n    }\n\n\n    const channels = [\n        \"whatsapp\",\n        \"email\",\n        \"telegram\"\n    ];\n\n\n    for (\n        const channel\n        of channels\n    ) {\n\n        const config =\n            systemConfig.notifications[channel];\n\n\n        if (\n            !config ||\n            typeof config !== \"object\" ||\n            Array.isArray(config)\n        ) {\n\n            throw new Error(\n                `system.json: falta notifications.${channel}.`\n            );\n        }\n\n\n        if (\n            typeof config.enabled !== \"boolean\"\n        ) {\n\n            throw new Error(\n                `system.json: notifications.${channel}.enabled ` +\n                `debe ser boolean.`\n            );\n        }\n    }\n\n\n    // ==================================================\n    // 4.1 VALIDAR EMAIL\n    // ==================================================\n\n    const emailConfig =\n        systemConfig.notifications.email;\n\n\n    if (\n        !Array.isArray(\n            emailConfig.recipients\n        )\n    ) {\n\n        throw new Error(\n            \"system.json: notifications.email.recipients \" +\n            \"debe ser un array.\"\n        );\n    }\n\n\n    // Si el canal Email está habilitado,\n    // necesitamos al menos un destinatario.\n\n    if (\n        emailConfig.enabled === true &&\n        emailConfig.recipients.length === 0\n    ) {\n\n        throw new Error(\n            \"system.json: email está habilitado pero \" +\n            \"no existen destinatarios configurados.\"\n        );\n    }\n\n\n    // Validar cada destinatario.\n\n    for (\n        const recipient\n        of emailConfig.recipients\n    ) {\n\n        if (\n            typeof recipient !== \"string\" ||\n            recipient.trim() === \"\"\n        ) {\n\n            throw new Error(\n                \"system.json: existe un destinatario \" +\n                \"de email vacío o inválido.\"\n            );\n        }\n\n\n        // Validación básica de formato.\n        // No pretende validar completamente RFC 5322,\n        // sólo detectar errores evidentes de configuración.\n\n        if (\n            !recipient.includes(\"@\") ||\n            recipient.startsWith(\"@\") ||\n            recipient.endsWith(\"@\")\n        ) {\n\n            throw new Error(\n                `system.json: destinatario email inválido: ` +\n                `${recipient}`\n            );\n        }\n    }\n\n\n    // ==================================================\n    // 5. GUARDAR CONFIGURACIÓN\n    // ==================================================\n\n    global.set(\n        \"systemConfig\",\n        systemConfig\n    );\n\n\n    // ==================================================\n    // 6. ESTADO VISUAL\n    // ==================================================\n\n    node.status({\n\n        fill:\n            \"green\",\n\n        shape:\n            \"dot\",\n\n        text:\n            \"SYSTEM CONFIG OK\"\n\n    });\n\n\n    // ==================================================\n    // 7. EVENTO STARTUP\n    // ==================================================\n\n    msg.startupEvent = {\n\n        component:\n            component,\n\n        ok:\n            true,\n\n        count:\n            1,\n\n        error:\n            null,\n\n        timestamp:\n            new Date().toISOString()\n\n    };\n\n\n    msg.payload =\n        systemConfig;\n\n\n    return msg;\n\n\n}\ncatch (err) {\n\n\n    // ==================================================\n    // ERROR\n    // ==================================================\n\n    global.set(\n        \"systemConfig\",\n        null\n    );\n\n\n    node.status({\n\n        fill:\n            \"red\",\n\n        shape:\n            \"ring\",\n\n        text:\n            \"ERROR\"\n\n    });\n\n\n    msg.startupEvent = {\n\n        component:\n            component,\n\n        ok:\n            false,\n\n        count:\n            0,\n\n        error:\n            err.message,\n\n        timestamp:\n            new Date().toISOString()\n\n    };\n\n\n    msg.payload =\n        null;\n\n\n    return msg;\n}",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -2675,7 +2698,7 @@
         "id": "09164e8ae6798653",
         "type": "debug",
         "z": "087926ec68603352",
-        "name": "debug 32",
+        "name": "debug QR",
         "active": true,
         "tosidebar": true,
         "console": false,
@@ -2684,25 +2707,9 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 820,
-        "y": 460,
+        "x": 1030,
+        "y": 220,
         "wires": []
-    },
-    {
-        "id": "790c4c7fb2272298",
-        "type": "whatsapp-api-send",
-        "z": "087926ec68603352",
-        "d": true,
-        "account": "b2f4d7c2e9b00102",
-        "name": "Send Whatsapp",
-        "peer": "59894055347@s.whatsapp.net",
-        "x": 1000,
-        "y": 320,
-        "wires": [
-            [
-                "09164e8ae6798653"
-            ]
-        ]
     },
     {
         "id": "7f0516fb8d06e9c2",
@@ -2717,7 +2724,7 @@
         "finalize": "",
         "libs": [],
         "x": 320,
-        "y": 380,
+        "y": 140,
         "wires": [
             [
                 "6857f8351a2ba8bd",
@@ -2730,7 +2737,7 @@
         "type": "function",
         "z": "087926ec68603352",
         "name": "Severity / routing",
-        "func": "// ======================================================\n// SEVERITY / ROUTING\n// ======================================================\n//\n// RESPONSABILIDAD:\n//\n// 1. Determinar qué canales CORRESPONDEN según severidad.\n// 2. Consultar qué canales están HABILITADOS en system.json.\n// 3. Generar el routing efectivo.\n//\n// POLÍTICA:\n//\n// CRITICAL\n//   WhatsApp : sí\n//   Email    : sí\n//   Telegram : sí\n//\n// WARNING\n//   WhatsApp : sí\n//   Email    : sí\n//   Telegram : no\n//\n// INFO\n//   No genera notificación externa.\n//\n// IMPORTANTE:\n//\n// Un canal sólo se utiliza cuando:\n//\n//   política === true\n//          Y\n//   enabled === true\n//\n// ======================================================\n\n\n// ======================================================\n// 1. VALIDAR ALARMA\n// ======================================================\n\nconst alarm =\n    msg.alarm;\n\n\nif (\n    !alarm ||\n    typeof alarm !== \"object\"\n) {\n\n    node.error(\n        \"Severity / Routing: no existe msg.alarm\"\n    );\n\n    return null;\n}\n\n\nif (\n    typeof alarm.severity !== \"string\"\n) {\n\n    node.error(\n        \"Severity / Routing: falta severity\"\n    );\n\n    return null;\n}\n\n\nif (\n    alarm.state !== \"ACTIVE\" &&\n    alarm.state !== \"CLEARED\"\n) {\n\n    node.error(\n        \"Severity / Routing: estado inválido: \" +\n        alarm.state\n    );\n\n    return null;\n}\n\n\n// ======================================================\n// 2. SYSTEM CONFIG\n// ======================================================\n\nconst systemConfig =\n    global.get(\"systemConfig\");\n\n\nif (\n    !systemConfig ||\n    typeof systemConfig !== \"object\"\n) {\n\n    node.error(\n        \"Severity / Routing: systemConfig no está cargado.\"\n    );\n\n    return null;\n}\n\n\nconst notifications =\n    systemConfig.notifications;\n\n\nif (\n    !notifications ||\n    typeof notifications !== \"object\"\n) {\n\n    node.error(\n        \"Severity / Routing: falta configuración notifications.\"\n    );\n\n    return null;\n}\n\n\n// ======================================================\n// 3. DISPONIBILIDAD DE CANALES\n// ======================================================\n\nconst enabled = {\n\n    whatsapp:\n        notifications.whatsapp?.enabled === true,\n\n    email:\n        notifications.email?.enabled === true,\n\n    telegram:\n        notifications.telegram?.enabled === true\n};\n\n\n// ======================================================\n// 4. POLÍTICA SEGÚN SEVERIDAD\n// ======================================================\n\nconst policy = {\n\n    whatsapp:\n        false,\n\n    email:\n        false,\n\n    telegram:\n        false\n};\n\n\nswitch (\n    alarm.severity\n) {\n\n    // ==================================================\n    // CRITICAL\n    // ==================================================\n\n    case \"CRITICAL\":\n\n        policy.whatsapp =\n            true;\n\n        policy.email =\n            true;\n\n        policy.telegram =\n            true;\n\n        break;\n\n\n    // ==================================================\n    // WARNING\n    // ==================================================\n\n    case \"WARNING\":\n\n        policy.whatsapp =\n            true;\n\n        policy.email =\n            true;\n\n        policy.telegram =\n            false;\n\n        break;\n\n\n    // ==================================================\n    // INFO\n    // ==================================================\n\n    case \"INFO\":\n\n        // Sólo registro interno.\n\n        policy.whatsapp =\n            false;\n\n        policy.email =\n            false;\n\n        policy.telegram =\n            false;\n\n        break;\n\n\n    // ==================================================\n    // SEVERIDAD DESCONOCIDA\n    // ==================================================\n\n    default:\n\n        node.error(\n            \"Severity / Routing: severidad desconocida: \" +\n            alarm.severity\n        );\n\n        return null;\n}\n\n\n// ======================================================\n// 5. ROUTING EFECTIVO\n// ======================================================\n//\n// Canal efectivo =\n//\n//     policy && enabled\n//\n// ======================================================\n\nmsg.routing = {\n\n    whatsapp:\n        policy.whatsapp &&\n        enabled.whatsapp,\n\n    email:\n        policy.email &&\n        enabled.email,\n\n    telegram:\n        policy.telegram &&\n        enabled.telegram\n};\n\n\n// ======================================================\n// 6. METADATA DE DIAGNÓSTICO\n// ======================================================\n//\n// Útil para Debug y para el futuro manual.\n//\n// routingPolicy:\n//\n//   qué debería enviarse por severidad\n//\n// notificationChannels:\n//\n//   qué está actualmente habilitado\n//\n// routing:\n//\n//   qué realmente se enviará\n//\n// ======================================================\n\nmsg.routingPolicy = {\n\n    whatsapp:\n        policy.whatsapp,\n\n    email:\n        policy.email,\n\n    telegram:\n        policy.telegram\n};\n\n\nmsg.notificationChannels = {\n\n    whatsapp:\n        enabled.whatsapp,\n\n    email:\n        enabled.email,\n\n    telegram:\n        enabled.telegram\n};\n\n\n// ======================================================\n// 7. STATUS\n// ======================================================\n\nconst activeChannels =\n    Object.entries(msg.routing)\n        .filter(\n            ([, value]) =>\n                value === true\n        )\n        .map(\n            ([key]) =>\n                key\n        );\n\n\nif (\n    activeChannels.length === 0\n) {\n\n    node.status({\n\n        fill:\n            \"grey\",\n\n        shape:\n            \"ring\",\n\n        text:\n            \"SIN CANALES EXTERNOS\"\n\n    });\n\n}\nelse {\n\n    node.status({\n\n        fill:\n            \"green\",\n\n        shape:\n            \"dot\",\n\n        text:\n            activeChannels.join(\", \")\n\n    });\n}\n\n\n// ======================================================\n// SALIDA\n// ======================================================\n\nreturn msg;",
+        "func": "// ======================================================\n// SEVERITY / ROUTING\n// ======================================================\n//\n// RESPONSABILIDAD:\n//\n// 1. Determinar qué canales CORRESPONDEN según severidad.\n// 2. Consultar qué canales están HABILITADOS en system.json.\n// 3. Generar el routing efectivo.\n//\n// POLÍTICA:\n//\n// CRITICAL\n//   WhatsApp : sí\n//   Email    : sí\n//   Telegram : sí\n//\n// WARNING\n//   WhatsApp : no\n//   Email    : sí\n//   Telegram : no\n//\n// INFO\n//   No genera notificación externa.\n//\n// IMPORTANTE:\n//\n// Un canal sólo se utiliza cuando:\n//\n//   política === true\n//          Y\n//   enabled === true\n//\n// ======================================================\n\n\n// ======================================================\n// 1. VALIDAR ALARMA\n// ======================================================\n\nconst alarm =\n    msg.alarm;\n\n\nif (\n    !alarm ||\n    typeof alarm !== \"object\"\n) {\n\n    node.error(\n        \"Severity / Routing: no existe msg.alarm\"\n    );\n\n    return null;\n}\n\n\nif (\n    typeof alarm.severity !== \"string\"\n) {\n\n    node.error(\n        \"Severity / Routing: falta severity\"\n    );\n\n    return null;\n}\n\n\nif (\n    alarm.state !== \"ACTIVE\" &&\n    alarm.state !== \"CLEARED\"\n) {\n\n    node.error(\n        \"Severity / Routing: estado inválido: \" +\n        alarm.state\n    );\n\n    return null;\n}\n\n\n// ======================================================\n// 2. SYSTEM CONFIG\n// ======================================================\n\nconst systemConfig =\n    global.get(\"systemConfig\");\n\n\nif (\n    !systemConfig ||\n    typeof systemConfig !== \"object\"\n) {\n\n    node.error(\n        \"Severity / Routing: systemConfig no está cargado.\"\n    );\n\n    return null;\n}\n\n\nconst notifications =\n    systemConfig.notifications;\n\n\nif (\n    !notifications ||\n    typeof notifications !== \"object\"\n) {\n\n    node.error(\n        \"Severity / Routing: falta configuración notifications.\"\n    );\n\n    return null;\n}\n\n\n// ======================================================\n// 3. DISPONIBILIDAD DE CANALES\n// ======================================================\n\nconst enabled = {\n\n    whatsapp:\n        notifications.whatsapp?.enabled === true,\n\n    email:\n        notifications.email?.enabled === true,\n\n    telegram:\n        notifications.telegram?.enabled === true\n};\n\n\n// ======================================================\n// 4. POLÍTICA SEGÚN SEVERIDAD\n// ======================================================\n\nconst policy = {\n\n    whatsapp:\n        false,\n\n    email:\n        false,\n\n    telegram:\n        false\n};\n\n\nswitch (\n    alarm.severity\n) {\n\n    // ==================================================\n    // CRITICAL\n    // ==================================================\n\n    case \"CRITICAL\":\n\n        policy.whatsapp =\n            true;\n\n        policy.email =\n            true;\n\n        policy.telegram =\n            true;\n\n        break;\n\n\n    // ==================================================\n    // WARNING\n    // ==================================================\n\n    case \"WARNING\":\n\n        policy.whatsapp =\n            false;\n\n        policy.email =\n            true;\n\n        policy.telegram =\n            false;\n\n        break;\n\n\n    // ==================================================\n    // INFO\n    // ==================================================\n\n    case \"INFO\":\n\n        // Email únicamente.\n        // No genera WhatsApp ni Telegram.\n\n        policy.whatsapp =\n            false;\n\n        policy.email =\n            true;\n\n        policy.telegram =\n            false;\n\n        break;\n\n\n    // ==================================================\n    // SEVERIDAD DESCONOCIDA\n    // ==================================================\n\n    default:\n\n        node.error(\n            \"Severity / Routing: severidad desconocida: \" +\n            alarm.severity\n        );\n\n        return null;\n}\n\n\n// ======================================================\n// 5. ROUTING EFECTIVO\n// ======================================================\n//\n// Canal efectivo =\n//\n//     policy && enabled\n//\n// ======================================================\n\nmsg.routing = {\n\n    whatsapp:\n        policy.whatsapp &&\n        enabled.whatsapp,\n\n    email:\n        policy.email &&\n        enabled.email,\n\n    telegram:\n        policy.telegram &&\n        enabled.telegram\n};\n\n\n// ======================================================\n// 6. METADATA DE DIAGNÓSTICO\n// ======================================================\n//\n// Útil para Debug y para el futuro manual.\n//\n// routingPolicy:\n//\n//   qué debería enviarse por severidad\n//\n// notificationChannels:\n//\n//   qué está actualmente habilitado\n//\n// routing:\n//\n//   qué realmente se enviará\n//\n// ======================================================\n\nmsg.routingPolicy = {\n\n    whatsapp:\n        policy.whatsapp,\n\n    email:\n        policy.email,\n\n    telegram:\n        policy.telegram\n};\n\n\nmsg.notificationChannels = {\n\n    whatsapp:\n        enabled.whatsapp,\n\n    email:\n        enabled.email,\n\n    telegram:\n        enabled.telegram\n};\n\n\n// ======================================================\n// 7. STATUS\n// ======================================================\n\nconst activeChannels =\n    Object.entries(msg.routing)\n        .filter(\n            ([, value]) =>\n                value === true\n        )\n        .map(\n            ([key]) =>\n                key\n        );\n\n\nif (\n    activeChannels.length === 0\n) {\n\n    node.status({\n\n        fill:\n            \"grey\",\n\n        shape:\n            \"ring\",\n\n        text:\n            \"SIN CANALES EXTERNOS\"\n\n    });\n\n}\nelse {\n\n    node.status({\n\n        fill:\n            \"green\",\n\n        shape:\n            \"dot\",\n\n        text:\n            activeChannels.join(\", \")\n\n    });\n}\n\n\n// ======================================================\n// SALIDA\n// ======================================================\n\nreturn msg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
@@ -2738,7 +2745,7 @@
         "finalize": "",
         "libs": [],
         "x": 570,
-        "y": 380,
+        "y": 140,
         "wires": [
             [
                 "d3b56f1803a6558d",
@@ -2764,10 +2771,11 @@
         "repair": false,
         "outputs": 1,
         "x": 270,
-        "y": 460,
+        "y": 220,
         "wires": [
             [
-                "d5f5df86484aebc6"
+                "d5f5df86484aebc6",
+                "e9c48dedcd0c9b57"
             ]
         ]
     },
@@ -2775,20 +2783,19 @@
         "id": "d5f5df86484aebc6",
         "type": "function",
         "z": "087926ec68603352",
-        "name": "Prepare Whatsapp message",
-        "func": "// ============================================\n// PREPARE WHATSAPP\n// ============================================\n\nif (!msg.whatsappMessage) {\n    node.error(\"No existe msg.whatsappMessage\");\n    return null;\n}\n\nmsg.payload = msg.whatsappMessage;\n\nreturn msg;",
+        "name": "Prepare Whatsapp QR",
+        "func": "// =====================================================\n// PREPARE WHATSAPP QR\n// Genera un mensaje por destinatario configurado\n// =====================================================\n\nif (!msg.whatsappMessage) {\n    node.error(\n        \"No existe msg.whatsappMessage\",\n        msg\n    );\n\n    return null;\n}\n\n\n// -----------------------------------------------------\n// SYSTEM CONFIG\n// -----------------------------------------------------\n\nconst systemConfig =\n    global.get(\"systemConfig\");\n\nif (!systemConfig) {\n    node.error(\n        \"systemConfig no está cargado\",\n        msg\n    );\n\n    return null;\n}\n\n\nconst qr =\n    systemConfig.notifications\n        ?.whatsapp\n        ?.qr;\n\n\nif (!qr) {\n    node.error(\n        \"No existe notifications.whatsapp.qr\",\n        msg\n    );\n\n    return null;\n}\n\n\nif (qr.enabled !== true) {\n    return null;\n}\n\n\nif (\n    !Array.isArray(qr.recipients) ||\n    qr.recipients.length === 0\n) {\n    node.error(\n        \"whatsapp.qr.recipients está vacío\",\n        msg\n    );\n\n    return null;\n}\n\n\n// -----------------------------------------------------\n// GENERAR UN MSG POR DESTINATARIO\n// -----------------------------------------------------\n\nconst messages = [];\n\n\nfor (const recipient of qr.recipients) {\n\n    if (!recipient.phone) {\n\n        node.warn(\n            \"Destinatario WhatsApp sin teléfono: \" +\n            (recipient.name || \"sin nombre\")\n        );\n\n        continue;\n    }\n\n\n    // Dejamos solamente números\n    const phone =\n        String(recipient.phone)\n            .replace(/\\D/g, \"\");\n\n\n    if (!phone) {\n        continue;\n    }\n\n\n    const out = {\n        ...msg,\n\n        payload:\n            msg.whatsappMessage,\n\n        whatsapp: {\n            ...(msg.whatsapp || {}),\n\n            peer:\n                phone +\n                \"@s.whatsapp.net\"\n        },\n\n        notification: {\n            channel:\n                \"whatsapp_qr\",\n\n            recipientName:\n                recipient.name ||\n                phone,\n\n            recipientPhone:\n                phone\n        }\n    };\n\n\n    messages.push(out);\n}\n\n\n// -----------------------------------------------------\n// SALIDA\n// -----------------------------------------------------\n\nif (messages.length === 0) {\n\n    node.error(\n        \"No se generaron mensajes WhatsApp QR\",\n        msg\n    );\n\n    return null;\n}\n\n\n// Un único output.\n// Node-RED enviará cada msg individualmente.\nreturn [messages];",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 500,
-        "y": 460,
+        "x": 480,
+        "y": 220,
         "wires": [
             [
-                "790c4c7fb2272298",
-                "09164e8ae6798653"
+                "d4f4d7c2e9b00104"
             ]
         ]
     },
@@ -2804,8 +2811,8 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 830,
-        "y": 380,
+        "x": 850,
+        "y": 140,
         "wires": [
             []
         ]
@@ -2824,7 +2831,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 220,
-        "y": 300,
+        "y": 60,
         "wires": []
     },
     {
@@ -2841,7 +2848,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 420,
-        "y": 300,
+        "y": 60,
         "wires": []
     },
     {
@@ -2858,7 +2865,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 660,
-        "y": 300,
+        "y": 60,
         "wires": []
     },
     {
@@ -2870,7 +2877,7 @@
             "1a1c89722ae7a15e"
         ],
         "x": 145,
-        "y": 380,
+        "y": 140,
         "wires": [
             [
                 "7f0516fb8d06e9c2",
@@ -2893,8 +2900,8 @@
         "checkall": "true",
         "repair": false,
         "outputs": 1,
-        "x": 270,
-        "y": 540,
+        "x": 290,
+        "y": 360,
         "wires": [
             [
                 "701332ee5b9b4b5b"
@@ -2906,18 +2913,19 @@
         "type": "function",
         "z": "087926ec68603352",
         "name": "Prepare email",
-        "func": "// ============================================\n// PREPARE EMAIL\n// ============================================\n//\n// RESPONSABILIDAD:\n//\n// Recibir un evento normalizado:\n//\n//     msg.alarm\n//\n// y generar un mensaje NUEVO y mínimo\n// destinado exclusivamente al nodo de Email.\n//\n// SALIDA:\n//\n//     msg._msgid\n//     msg.to\n//     msg.topic\n//     msg.payload\n//\n// NO propagamos:\n//\n// - whatsappMessage\n// - routing\n// - alarm\n// - alarmValue\n// - healthAlarm\n// - device\n// - variable\n// - point\n// - _event\n// - metadata de otros canales\n//\n// ============================================\n\n\n// ============================================\n// 1. ALARMA\n// ============================================\n\nconst alarm =\n    msg.alarm;\n\n\n// ============================================\n// 2. VALIDACIÓN\n// ============================================\n\nif (\n    !alarm ||\n    typeof alarm !== \"object\"\n) {\n\n    node.error(\n        \"Prepare Email: no existe msg.alarm\"\n    );\n\n    return null;\n}\n\n\nif (\n    !alarm.device ||\n    typeof alarm.device !== \"object\"\n) {\n\n    node.error(\n        \"Prepare Email: falta alarm.device\"\n    );\n\n    return null;\n}\n\n\nif (\n    !alarm.point ||\n    typeof alarm.point !== \"object\"\n) {\n\n    node.error(\n        \"Prepare Email: falta alarm.point\"\n    );\n\n    return null;\n}\n\n\nif (\n    typeof alarm.timestamp !== \"number\"\n) {\n\n    node.error(\n        \"Prepare Email: timestamp inválido\"\n    );\n\n    return null;\n}\n\n\n// ============================================\n// 3. FECHA\n// ============================================\n\nconst date =\n    new Date(\n        alarm.timestamp\n    );\n\n\nconst dateString =\n    date.toLocaleString(\n        \"es-UY\",\n        {\n            timeZone:\n                \"America/Montevideo\"\n        }\n    );\n\n\n// ============================================\n// 4. SEVERIDAD\n// ============================================\n\nlet severityText =\n    alarm.severity || \"UNKNOWN\";\n\n\nswitch (\n    alarm.severity\n) {\n\n    case \"CRITICAL\":\n\n        severityText =\n            \"CRÍTICA\";\n\n        break;\n\n\n    case \"WARNING\":\n\n        severityText =\n            \"ADVERTENCIA\";\n\n        break;\n\n\n    case \"INFO\":\n\n        severityText =\n            \"INFORMACIÓN\";\n\n        break;\n}\n\n\n// ============================================\n// 5. ESTADO\n// ============================================\n\nlet stateText;\nlet subjectPrefix;\n\n\nif (\n    alarm.state === \"ACTIVE\"\n) {\n\n    stateText =\n        \"ACTIVA\";\n\n    subjectPrefix =\n        \"ALARMA BMS\";\n\n}\nelse if (\n    alarm.state === \"CLEARED\"\n) {\n\n    stateText =\n        \"RESTABLECIDA\";\n\n    subjectPrefix =\n        \"ALARMA RESTABLECIDA\";\n\n}\nelse {\n\n    node.error(\n        \"Prepare Email: estado desconocido: \" +\n        alarm.state\n    );\n\n    return null;\n}\n\n\n// ============================================\n// 6. DURACIÓN\n// ============================================\n\nlet durationText =\n    \"\";\n\n\nif (\n    alarm.state === \"CLEARED\" &&\n    typeof alarm.durationMs === \"number\"\n) {\n\n    const totalSeconds =\n        Math.floor(\n            alarm.durationMs / 1000\n        );\n\n\n    const hours =\n        Math.floor(\n            totalSeconds / 3600\n        );\n\n\n    const minutes =\n        Math.floor(\n            (totalSeconds % 3600) / 60\n        );\n\n\n    const seconds =\n        totalSeconds % 60;\n\n\n    if (\n        hours > 0\n    ) {\n\n        durationText =\n            `${hours} h ${minutes} min ${seconds} s`;\n\n    }\n    else if (\n        minutes > 0\n    ) {\n\n        durationText =\n            `${minutes} min ${seconds} s`;\n\n    }\n    else {\n\n        durationText =\n            `${seconds} s`;\n    }\n}\n\n\n// ============================================\n// 7. DESTINATARIO\n// ============================================\n//\n// TEMPORAL:\n//\n// Más adelante este dato debe salir de nuestro\n// archivo/configuración general del BMS.\n//\n// ============================================\n\nconst recipient =\n    \"Mercolux@semm-mautone.com.uy\";\n\n\n// ============================================\n// 8. ASUNTO\n// ============================================\n\nconst subject =\n    `[${subjectPrefix}] ` +\n    `${alarm.device.name} - ` +\n    `${alarm.point.name}`;\n\n\n// ============================================\n// 9. CUERPO\n// ============================================\n\nlet body =\n\n`SISTEMA BMS - SANATORIO\n\n${subjectPrefix}\n\nEquipo: ${alarm.device.name}\nAlarma: ${alarm.point.name}\nEstado: ${stateText}\nSeveridad: ${severityText}\n\nDescripción:\n${alarm.message}\n\nFecha: ${dateString}`;\n\n\n// ============================================\n// 10. DURACIÓN\n// ============================================\n\nif (\n    durationText\n) {\n\n    body +=\n        `\\nDuración de la alarma: ${durationText}`;\n}\n\n\n// ============================================\n// 11. INFORMACIÓN TÉCNICA\n// ============================================\n\nbody +=\n\n`\n\n----------------------------------------\nInformación técnica\n\nDevice ID: ${alarm.device.id}\nPoint ID: ${alarm.point.id}\nAlarm ID: ${alarm.id}\nValor: ${alarm.value}\n----------------------------------------\n\nMensaje generado automáticamente por el sistema BMS.\n`;\n\n\n// ============================================\n// 12. MENSAJE EMAIL LIMPIO\n// ============================================\n//\n// IMPORTANTE:\n//\n// Creamos un objeto NUEVO.\n//\n// No hacemos:\n//\n//     msg.payload = body;\n//     return msg;\n//\n// porque eso arrastraría todas las propiedades\n// utilizadas anteriormente por:\n//\n// - Alarm Engine\n// - Alarm Formatter\n// - Routing\n// - WhatsApp\n//\n// ============================================\n\nconst emailMsg = {\n\n    _msgid:\n        msg._msgid,\n\n    to:\n        recipient,\n\n    topic:\n        subject,\n\n    payload:\n        body\n};\n\n\n// ============================================\n// 13. SALIDA\n// ============================================\n\nreturn emailMsg;",
+        "func": "// ============================================\n// PREPARE EMAIL\n// ============================================\n//\n// RESPONSABILIDAD:\n//\n// Recibir un evento normalizado:\n//\n//     msg.alarm\n//\n// y generar un mensaje NUEVO y mínimo\n// destinado exclusivamente al nodo de Email.\n//\n// CONFIGURACIÓN:\n//\n// Los destinatarios se obtienen desde:\n//\n//     global.systemConfig\n//         .notifications\n//         .email\n//         .recipients\n//\n// SALIDA:\n//\n//     msg._msgid\n//     msg.to\n//     msg.topic\n//     msg.payload\n//\n// NO propagamos:\n//\n// - whatsappMessage\n// - routing\n// - alarm\n// - alarmValue\n// - healthAlarm\n// - device\n// - variable\n// - point\n// - _event\n// - metadata de otros canales\n//\n// ============================================\n\n\n// ============================================\n// 1. ALARMA\n// ============================================\n\nconst alarm =\n    msg.alarm;\n\n\n// ============================================\n// 2. VALIDACIÓN DE ALARMA\n// ============================================\n\nif (\n    !alarm ||\n    typeof alarm !== \"object\"\n) {\n\n    node.error(\n        \"Prepare Email: no existe msg.alarm\"\n    );\n\n    return null;\n}\n\n\nif (\n    !alarm.device ||\n    typeof alarm.device !== \"object\"\n) {\n\n    node.error(\n        \"Prepare Email: falta alarm.device\"\n    );\n\n    return null;\n}\n\n\nif (\n    !alarm.point ||\n    typeof alarm.point !== \"object\"\n) {\n\n    node.error(\n        \"Prepare Email: falta alarm.point\"\n    );\n\n    return null;\n}\n\n\nif (\n    typeof alarm.timestamp !== \"number\"\n) {\n\n    node.error(\n        \"Prepare Email: timestamp inválido\"\n    );\n\n    return null;\n}\n\n\n// ============================================\n// 3. FECHA\n// ============================================\n\nconst date =\n    new Date(\n        alarm.timestamp\n    );\n\n\nconst dateString =\n    date.toLocaleString(\n        \"es-UY\",\n        {\n            timeZone:\n                \"America/Montevideo\"\n        }\n    );\n\n\n// ============================================\n// 4. SEVERIDAD\n// ============================================\n\nlet severityText =\n    alarm.severity || \"UNKNOWN\";\n\n\nswitch (\n    alarm.severity\n) {\n\n    case \"CRITICAL\":\n\n        severityText =\n            \"CRÍTICA\";\n\n        break;\n\n\n    case \"WARNING\":\n\n        severityText =\n            \"ADVERTENCIA\";\n\n        break;\n\n\n    case \"INFO\":\n\n        severityText =\n            \"INFORMACIÓN\";\n\n        break;\n}\n\n\n// ============================================\n// 5. ESTADO\n// ============================================\n\nlet stateText;\nlet subjectPrefix;\n\n\nif (\n    alarm.state === \"ACTIVE\"\n) {\n\n    stateText =\n        \"ACTIVA\";\n\n    subjectPrefix =\n        \"ALARMA BMS\";\n\n}\nelse if (\n    alarm.state === \"CLEARED\"\n) {\n\n    stateText =\n        \"RESTABLECIDA\";\n\n    subjectPrefix =\n        \"ALARMA RESTABLECIDA\";\n\n}\nelse {\n\n    node.error(\n        \"Prepare Email: estado desconocido: \" +\n        alarm.state\n    );\n\n    return null;\n}\n\n\n// ============================================\n// 6. DURACIÓN\n// ============================================\n\nlet durationText =\n    \"\";\n\n\nif (\n    alarm.state === \"CLEARED\" &&\n    typeof alarm.durationMs === \"number\"\n) {\n\n    const totalSeconds =\n        Math.floor(\n            alarm.durationMs / 1000\n        );\n\n\n    const hours =\n        Math.floor(\n            totalSeconds / 3600\n        );\n\n\n    const minutes =\n        Math.floor(\n            (totalSeconds % 3600) / 60\n        );\n\n\n    const seconds =\n        totalSeconds % 60;\n\n\n    if (\n        hours > 0\n    ) {\n\n        durationText =\n            `${hours} h ${minutes} min ${seconds} s`;\n\n    }\n    else if (\n        minutes > 0\n    ) {\n\n        durationText =\n            `${minutes} min ${seconds} s`;\n\n    }\n    else {\n\n        durationText =\n            `${seconds} s`;\n    }\n}\n\n\n// ============================================\n// 7. CONFIGURACIÓN EMAIL\n// ============================================\n\nconst systemConfig =\n    global.get(\n        \"systemConfig\"\n    );\n\n\nif (\n    !systemConfig ||\n    typeof systemConfig !== \"object\"\n) {\n\n    node.error(\n        \"Prepare Email: systemConfig no está cargado.\"\n    );\n\n    return null;\n}\n\n\nif (\n    !systemConfig.notifications ||\n    typeof systemConfig.notifications !== \"object\"\n) {\n\n    node.error(\n        \"Prepare Email: falta configuración notifications.\"\n    );\n\n    return null;\n}\n\n\nconst emailConfig =\n    systemConfig.notifications.email;\n\n\nif (\n    !emailConfig ||\n    typeof emailConfig !== \"object\"\n) {\n\n    node.error(\n        \"Prepare Email: falta notifications.email.\"\n    );\n\n    return null;\n}\n\n\n// ============================================\n// 8. VERIFICAR CANAL HABILITADO\n// ============================================\n\nif (\n    emailConfig.enabled !== true\n) {\n\n    node.warn(\n        \"Prepare Email: canal Email deshabilitado.\"\n    );\n\n    return null;\n}\n\n\n// ============================================\n// 9. DESTINATARIOS\n// ============================================\n\nif (\n    !Array.isArray(\n        emailConfig.recipients\n    ) ||\n    emailConfig.recipients.length === 0\n) {\n\n    node.error(\n        \"Prepare Email: no hay destinatarios configurados.\"\n    );\n\n    return null;\n}\n\n\nconst recipients =\n    emailConfig.recipients\n        .filter(\n            value =>\n                typeof value === \"string\" &&\n                value.trim() !== \"\"\n        )\n        .map(\n            value =>\n                value.trim()\n        );\n\n\nif (\n    recipients.length === 0\n) {\n\n    node.error(\n        \"Prepare Email: no hay destinatarios válidos.\"\n    );\n\n    return null;\n}\n\n\n// node-red-node-email admite múltiples\n// destinatarios separados por coma.\n\nconst recipient =\n    recipients.join(\",\");\n\n\n// ============================================\n// 10. ASUNTO\n// ============================================\n\nconst subject =\n    `[${subjectPrefix}] ` +\n    `${alarm.device.name} - ` +\n    `${alarm.point.name}`;\n\n\n// ============================================\n// 11. CUERPO\n// ============================================\n\nlet body =\n\n`SISTEMA BMS - SANATORIO\n\n${subjectPrefix}\n\nEquipo: ${alarm.device.name}\nAlarma: ${alarm.point.name}\nEstado: ${stateText}\nSeveridad: ${severityText}\n\nDescripción:\n${alarm.message}\n\nFecha: ${dateString}`;\n\n\n// ============================================\n// 12. DURACIÓN\n// ============================================\n\nif (\n    durationText\n) {\n\n    body +=\n        `\\nDuración de la alarma: ${durationText}`;\n}\n\n\n// ============================================\n// 13. INFORMACIÓN TÉCNICA\n// ============================================\n\nbody +=\n\n`\n\n----------------------------------------\nInformación técnica\n\nDevice ID: ${alarm.device.id}\nPoint ID: ${alarm.point.id}\nAlarm ID: ${alarm.id}\nValor: ${alarm.value}\n----------------------------------------\n\nMensaje generado automáticamente por el sistema BMS.\n`;\n\n\n// ============================================\n// 14. MENSAJE EMAIL LIMPIO\n// ============================================\n//\n// Creamos un objeto NUEVO.\n//\n// No propagamos propiedades utilizadas por:\n//\n// - Alarm Engine\n// - Alarm Formatter\n// - Routing\n// - WhatsApp\n//\n// ============================================\n\nconst emailMsg = {\n\n    _msgid:\n        msg._msgid,\n\n    to:\n        recipient,\n\n    topic:\n        subject,\n\n    payload:\n        body\n};\n\n\n// ============================================\n// 15. STATUS\n// ============================================\n\nnode.status({\n\n    fill:\n        \"green\",\n\n    shape:\n        \"dot\",\n\n    text:\n        `${recipients.length} destinatario(s)`\n});\n\n\n// ============================================\n// 16. SALIDA\n// ============================================\n\nreturn emailMsg;",
         "outputs": 1,
         "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 440,
-        "y": 540,
+        "x": 460,
+        "y": 360,
         "wires": [
             [
-                "320e94ada7709d53"
+                "320e94ada7709d53",
+                "2097545c8891eeb5"
             ]
         ]
     },
@@ -2934,8 +2942,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 660,
-        "y": 540,
+        "x": 680,
+        "y": 360,
         "wires": []
     },
     {
@@ -2960,7 +2968,7 @@
         "payload": "",
         "payloadType": "date",
         "x": 240,
-        "y": 660,
+        "y": 760,
         "wires": [
             [
                 "a6670c2229c363da"
@@ -2980,7 +2988,7 @@
         "finalize": "",
         "libs": [],
         "x": 440,
-        "y": 660,
+        "y": 760,
         "wires": [
             [
                 "b1b7f10d47467217"
@@ -3001,7 +3009,7 @@
         "statusVal": "",
         "statusType": "auto",
         "x": 630,
-        "y": 660,
+        "y": 760,
         "wires": []
     },
     {
@@ -3026,7 +3034,7 @@
         "payload": "",
         "payloadType": "date",
         "x": 240,
-        "y": 720,
+        "y": 820,
         "wires": [
             [
                 "1af14e24381f79f9"
@@ -3046,9 +3054,308 @@
         "finalize": "",
         "libs": [],
         "x": 440,
-        "y": 720,
+        "y": 820,
         "wires": [
             []
+        ]
+    },
+    {
+        "id": "c34fa46ef5fe0835",
+        "type": "http in",
+        "z": "087926ec68603352",
+        "name": "API - Alarm History",
+        "url": "/bms/api/alarms",
+        "method": "get",
+        "upload": false,
+        "skipBodyParsing": false,
+        "swaggerDoc": "",
+        "x": 250,
+        "y": 620,
+        "wires": [
+            [
+                "194a136fda392a27"
+            ]
+        ]
+    },
+    {
+        "id": "df7b5cce750b48de",
+        "type": "http response",
+        "z": "087926ec68603352",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 710,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "194a136fda392a27",
+        "type": "function",
+        "z": "087926ec68603352",
+        "name": "API - Read Alarm Log",
+        "func": "// ======================================================\n// API - READ ALARM LOG\n// ======================================================\n//\n// Expone el Alarm Log actual mediante HTTP.\n//\n// Endpoint:\n//\n// GET /bms/api/alarms\n//\n// IMPORTANTE:\n// alarmLog pertenece al flow \"80 - Notification Engine\".\n// ======================================================\n\n\n// ------------------------------------------------------\n// LEER LOG\n// ------------------------------------------------------\n\nconst alarmLog =\n    flow.get(\"alarmLog\") || [];\n\n\n// ------------------------------------------------------\n// VALIDAR\n// ------------------------------------------------------\n\nif (!Array.isArray(alarmLog)) {\n\n    msg.statusCode = 500;\n\n    msg.headers = {\n        \"Content-Type\":\n            \"application/json; charset=utf-8\",\n\n        \"Cache-Control\":\n            \"no-store\"\n    };\n\n    msg.payload = {\n\n        ok:\n            false,\n\n        error:\n            \"alarmLog no contiene un array válido\"\n    };\n\n    return msg;\n}\n\n\n// ------------------------------------------------------\n// COPIA PARA VISUALIZACIÓN\n// ------------------------------------------------------\n//\n// alarmLog internamente:\n// viejo → nuevo\n//\n// Para la pantalla queremos:\n// nuevo → viejo\n//\n// slice() evita modificar el array original.\n// ------------------------------------------------------\n\nconst alarms =\n    alarmLog\n        .slice()\n        .reverse();\n\n\n// ------------------------------------------------------\n// RESPUESTA HTTP\n// ------------------------------------------------------\n\nmsg.statusCode = 200;\n\nmsg.headers = {\n\n    \"Content-Type\":\n        \"application/json; charset=utf-8\",\n\n    \"Cache-Control\":\n        \"no-store\"\n};\n\n\nmsg.payload = {\n\n    ok:\n        true,\n\n    generatedAt:\n        new Date().toISOString(),\n\n    count:\n        alarms.length,\n\n    alarms:\n        alarms\n};\n\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 620,
+        "wires": [
+            [
+                "df7b5cce750b48de"
+            ]
+        ]
+    },
+    {
+        "id": "e11c7e1ebf550b86",
+        "type": "http in",
+        "z": "087926ec68603352",
+        "name": "Alarm History Page",
+        "url": "/bms/alarm-history",
+        "method": "get",
+        "upload": false,
+        "skipBodyParsing": false,
+        "swaggerDoc": "",
+        "x": 250,
+        "y": 680,
+        "wires": [
+            [
+                "f54c214c19bb0cbb"
+            ]
+        ]
+    },
+    {
+        "id": "f54c214c19bb0cbb",
+        "type": "function",
+        "z": "087926ec68603352",
+        "name": "Alarm History page",
+        "func": "// ======================================================\n// BMS - ALARM HISTORY PAGE\n// ======================================================\n//\n// Página HTML para visualizar:\n//\n//     GET /bms/api/alarms\n//\n// No modifica alarmLog.\n// Sólo presenta la información.\n// ======================================================\n\nmsg.statusCode = 200;\n\nmsg.headers = {\n    \"Content-Type\": \"text/html; charset=utf-8\",\n    \"Cache-Control\": \"no-store\"\n};\n\nmsg.payload = `<!DOCTYPE html>\n<html lang=\"es\">\n<head>\n\n<meta charset=\"UTF-8\">\n\n<meta\n    name=\"viewport\"\n    content=\"width=device-width, initial-scale=1\"\n>\n\n<title>Historial de Alarmas BMS</title>\n\n<style>\n\n* {\n    box-sizing: border-box;\n}\n\nbody {\n    margin: 0;\n    font-family:\n        Arial,\n        Helvetica,\n        sans-serif;\n\n    background: #f3f4f6;\n    color: #1f2937;\n}\n\n.container {\n    width: 100%;\n    padding: 16px;\n}\n\n.header {\n    display: flex;\n    justify-content: space-between;\n    align-items: center;\n    gap: 15px;\n    margin-bottom: 14px;\n}\n\n.title {\n    font-size: 22px;\n    font-weight: 600;\n}\n\n.subtitle {\n    margin-top: 4px;\n    font-size: 12px;\n    color: #6b7280;\n}\n\n.status {\n    font-size: 12px;\n    color: #6b7280;\n}\n\n.toolbar {\n    display: flex;\n    flex-wrap: wrap;\n    gap: 8px;\n    margin-bottom: 12px;\n}\n\nbutton,\nselect,\ninput {\n    border: 1px solid #d1d5db;\n    border-radius: 5px;\n    background: white;\n    padding: 7px 10px;\n    font-size: 13px;\n}\n\nbutton {\n    cursor: pointer;\n}\n\nbutton.active {\n    background: #374151;\n    color: white;\n}\n\ninput {\n    min-width: 220px;\n}\n\n.summary {\n    display: flex;\n    gap: 18px;\n    margin-bottom: 10px;\n    font-size: 13px;\n}\n\n.summary strong {\n    font-size: 15px;\n}\n\n.table-container {\n    background: white;\n    border: 1px solid #d1d5db;\n    border-radius: 6px;\n    overflow: auto;\n}\n\ntable {\n    width: 100%;\n    border-collapse: collapse;\n    min-width: 900px;\n}\n\nth {\n    position: sticky;\n    top: 0;\n\n    background: #e5e7eb;\n\n    text-align: left;\n    font-size: 12px;\n    font-weight: 600;\n\n    padding: 9px;\n\n    border-bottom: 1px solid #cbd5e1;\n}\n\ntd {\n    padding: 8px 9px;\n\n    font-size: 12px;\n\n    border-bottom: 1px solid #e5e7eb;\n\n    vertical-align: top;\n}\n\ntr:hover {\n    background: #f9fafb;\n}\n\n.badge {\n    display: inline-block;\n\n    border-radius: 4px;\n\n    padding: 3px 7px;\n\n    font-size: 11px;\n    font-weight: 600;\n}\n\n.CRITICAL {\n    background: #fee2e2;\n    color: #991b1b;\n}\n\n.WARNING {\n    background: #fef3c7;\n    color: #92400e;\n}\n\n.INFO {\n    background: #dbeafe;\n    color: #1e40af;\n}\n\n.ACTIVE {\n    background: #fee2e2;\n    color: #991b1b;\n}\n\n.CLEARED {\n    background: #dcfce7;\n    color: #166534;\n}\n\n.empty {\n    padding: 30px;\n    text-align: center;\n    color: #6b7280;\n}\n\n.error {\n    color: #b91c1c;\n}\n\n</style>\n\n</head>\n\n<body>\n\n<div class=\"container\">\n\n    <div class=\"header\">\n\n        <div>\n\n            <div class=\"title\">\n                Historial de Alarmas\n            </div>\n\n            <div class=\"subtitle\">\n                Sistema BMS - Sanatorio\n            </div>\n\n        </div>\n\n        <div\n            id=\"lastUpdate\"\n            class=\"status\"\n        >\n            Cargando...\n        </div>\n\n    </div>\n\n\n    <div class=\"toolbar\">\n\n        <button\n            id=\"filterAll\"\n            class=\"active\"\n        >\n            Todos\n        </button>\n\n        <button id=\"filterActive\">\n            Activaciones\n        </button>\n\n        <button id=\"filterCleared\">\n            Restablecimientos\n        </button>\n\n\n        <select id=\"severity\">\n\n            <option value=\"\">\n                Todas las severidades\n            </option>\n\n            <option value=\"CRITICAL\">\n                Críticas\n            </option>\n\n            <option value=\"WARNING\">\n                Advertencias\n            </option>\n\n            <option value=\"INFO\">\n                Información\n            </option>\n\n        </select>\n\n\n        <input\n            id=\"search\"\n            type=\"text\"\n            placeholder=\"Buscar equipo o alarma...\"\n        >\n\n\n        <button id=\"refresh\">\n            Actualizar\n        </button>\n\n    </div>\n\n\n    <div class=\"summary\">\n\n        <div>\n            Eventos:\n            <strong id=\"eventCount\">0</strong>\n        </div>\n\n        <div>\n            Mostrando:\n            <strong id=\"visibleCount\">0</strong>\n        </div>\n\n    </div>\n\n\n    <div class=\"table-container\">\n\n        <table>\n\n            <thead>\n\n                <tr>\n\n                    <th>Fecha</th>\n\n                    <th>Equipo</th>\n\n                    <th>Alarma</th>\n\n                    <th>Severidad</th>\n\n                    <th>Evento</th>\n\n                    <th>Duración</th>\n\n                    <th>Descripción</th>\n\n                </tr>\n\n            </thead>\n\n            <tbody id=\"alarmTable\">\n            </tbody>\n\n        </table>\n\n        <div\n            id=\"empty\"\n            class=\"empty\"\n            style=\"display:none\"\n        >\n            No existen eventos para mostrar.\n        </div>\n\n    </div>\n\n</div>\n\n\n<script>\n\nlet alarms = [];\n\nlet stateFilter = \"\";\n\n\n// ======================================================\n// FECHA\n// ======================================================\n\nconst dateFormatter =\n    new Intl.DateTimeFormat(\n        \"es-UY\",\n        {\n            timeZone:\n                \"America/Montevideo\",\n\n            year:\n                \"numeric\",\n\n            month:\n                \"2-digit\",\n\n            day:\n                \"2-digit\",\n\n            hour:\n                \"2-digit\",\n\n            minute:\n                \"2-digit\",\n\n            second:\n                \"2-digit\"\n        }\n    );\n\n\n// ======================================================\n// DURACIÓN\n// ======================================================\n\nfunction formatDuration(ms) {\n\n    if (\n        typeof ms !== \"number\" ||\n        !Number.isFinite(ms)\n    ) {\n\n        return \"—\";\n    }\n\n\n    const totalSeconds =\n        Math.floor(\n            ms / 1000\n        );\n\n\n    const hours =\n        Math.floor(\n            totalSeconds / 3600\n        );\n\n\n    const minutes =\n        Math.floor(\n            (totalSeconds % 3600) / 60\n        );\n\n\n    const seconds =\n        totalSeconds % 60;\n\n\n    if (hours > 0) {\n\n        return (\n            hours +\n            \" h \" +\n            minutes +\n            \" min \" +\n            seconds +\n            \" s\"\n        );\n    }\n\n\n    if (minutes > 0) {\n\n        return (\n            minutes +\n            \" min \" +\n            seconds +\n            \" s\"\n        );\n    }\n\n\n    return seconds + \" s\";\n}\n\n\n// ======================================================\n// CELDA\n// ======================================================\n\nfunction addCell(row, value) {\n\n    const cell =\n        document.createElement(\"td\");\n\n    cell.textContent =\n        value ?? \"\";\n\n    row.appendChild(cell);\n\n    return cell;\n}\n\n\n// ======================================================\n// BADGE\n// ======================================================\n\nfunction addBadgeCell(\n    row,\n    value,\n    cssClass\n) {\n\n    const cell =\n        document.createElement(\"td\");\n\n\n    const badge =\n        document.createElement(\"span\");\n\n\n    badge.className =\n        \"badge \" + cssClass;\n\n\n    badge.textContent =\n        value;\n\n\n    cell.appendChild(\n        badge\n    );\n\n\n    row.appendChild(\n        cell\n    );\n}\n\n\n// ======================================================\n// RENDER\n// ======================================================\n\nfunction render() {\n\n    const table =\n        document.getElementById(\n            \"alarmTable\"\n        );\n\n\n    const severity =\n        document.getElementById(\n            \"severity\"\n        ).value;\n\n\n    const search =\n        document\n            .getElementById(\"search\")\n            .value\n            .trim()\n            .toLowerCase();\n\n\n    const filtered =\n        alarms.filter(\n            alarm => {\n\n                if (\n                    stateFilter &&\n                    alarm.state !== stateFilter\n                ) {\n\n                    return false;\n                }\n\n\n                if (\n                    severity &&\n                    alarm.severity !== severity\n                ) {\n\n                    return false;\n                }\n\n\n                if (search) {\n\n                    const text = [\n                        alarm.device?.name,\n                        alarm.device?.id,\n                        alarm.point?.name,\n                        alarm.point?.id,\n                        alarm.message\n                    ]\n                    .filter(Boolean)\n                    .join(\" \")\n                    .toLowerCase();\n\n\n                    if (\n                        !text.includes(search)\n                    ) {\n\n                        return false;\n                    }\n                }\n\n\n                return true;\n            }\n        );\n\n\n    table.textContent = \"\";\n\n\n    for (\n        const alarm\n        of filtered\n    ) {\n\n        const row =\n            document.createElement(\"tr\");\n\n\n        addCell(\n            row,\n            dateFormatter.format(\n                new Date(\n                    alarm.timestamp\n                )\n            )\n        );\n\n\n        addCell(\n            row,\n            alarm.device?.name ||\n            alarm.device?.id ||\n            \"—\"\n        );\n\n\n        addCell(\n            row,\n            alarm.point?.name ||\n            alarm.point?.id ||\n            \"—\"\n        );\n\n\n        addBadgeCell(\n            row,\n            alarm.severity ||\n            \"—\",\n            alarm.severity || \"\"\n        );\n\n\n        addBadgeCell(\n            row,\n\n            alarm.state === \"ACTIVE\"\n                ? \"ACTIVADA\"\n                : (\n                    alarm.state === \"CLEARED\"\n                        ? \"RESTABLECIDA\"\n                        : alarm.state\n                ),\n\n            alarm.state || \"\"\n        );\n\n\n        addCell(\n            row,\n            formatDuration(\n                alarm.durationMs\n            )\n        );\n\n\n        addCell(\n            row,\n            alarm.message || \"\"\n        );\n\n\n        table.appendChild(\n            row\n        );\n    }\n\n\n    document.getElementById(\n        \"visibleCount\"\n    ).textContent =\n        filtered.length;\n\n\n    document.getElementById(\n        \"empty\"\n    ).style.display =\n        filtered.length === 0\n            ? \"block\"\n            : \"none\";\n}\n\n\n// ======================================================\n// CARGA API\n// ======================================================\n\nasync function loadAlarms() {\n\n    const status =\n        document.getElementById(\n            \"lastUpdate\"\n        );\n\n\n    try {\n\n        const response =\n            await fetch(\n                \"/bms/api/alarms\",\n                {\n                    cache:\n                        \"no-store\"\n                }\n            );\n\n\n        if (!response.ok) {\n\n            throw new Error(\n                \"HTTP \" +\n                response.status\n            );\n        }\n\n\n        const data =\n            await response.json();\n\n\n        if (\n            data.ok !== true ||\n            !Array.isArray(data.alarms)\n        ) {\n\n            throw new Error(\n                \"Respuesta API inválida\"\n            );\n        }\n\n\n        alarms =\n            data.alarms;\n\n\n        document.getElementById(\n            \"eventCount\"\n        ).textContent =\n            data.count;\n\n\n        status.classList.remove(\n            \"error\"\n        );\n\n\n        status.textContent =\n            \"Actualizado: \" +\n            new Date()\n                .toLocaleTimeString(\n                    \"es-UY\"\n                );\n\n\n        render();\n\n    }\n    catch (error) {\n\n        status.classList.add(\n            \"error\"\n        );\n\n\n        status.textContent =\n            \"Error de comunicación\";\n    }\n}\n\n\n// ======================================================\n// FILTROS\n// ======================================================\n\nfunction setStateFilter(\n    value,\n    buttonId\n) {\n\n    stateFilter =\n        value;\n\n\n    document\n        .querySelectorAll(\n            \".toolbar button\"\n        )\n        .forEach(\n            button =>\n                button.classList.remove(\n                    \"active\"\n                )\n        );\n\n\n    document.getElementById(\n        buttonId\n    ).classList.add(\n        \"active\"\n    );\n\n\n    render();\n}\n\n\ndocument.getElementById(\n    \"filterAll\"\n).onclick =\n    () =>\n        setStateFilter(\n            \"\",\n            \"filterAll\"\n        );\n\n\ndocument.getElementById(\n    \"filterActive\"\n).onclick =\n    () =>\n        setStateFilter(\n            \"ACTIVE\",\n            \"filterActive\"\n        );\n\n\ndocument.getElementById(\n    \"filterCleared\"\n).onclick =\n    () =>\n        setStateFilter(\n            \"CLEARED\",\n            \"filterCleared\"\n        );\n\n\ndocument.getElementById(\n    \"severity\"\n).onchange =\n    render;\n\n\ndocument.getElementById(\n    \"search\"\n).oninput =\n    render;\n\n\ndocument.getElementById(\n    \"refresh\"\n).onclick =\n    loadAlarms;\n\n\n// ======================================================\n// START\n// ======================================================\n\nloadAlarms();\n\n\n// Refresco automático.\n// No recarga la página.\n// Sólo consulta el JSON.\n\nsetInterval(\n    loadAlarms,\n    5000\n);\n\n</script>\n\n</body>\n</html>`;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 680,
+        "wires": [
+            [
+                "4ec5193143e7ca9c"
+            ]
+        ]
+    },
+    {
+        "id": "4ec5193143e7ca9c",
+        "type": "http response",
+        "z": "087926ec68603352",
+        "name": "",
+        "statusCode": "",
+        "headers": {},
+        "x": 710,
+        "y": 680,
+        "wires": []
+    },
+    {
+        "id": "2097545c8891eeb5",
+        "type": "e-mail",
+        "z": "087926ec68603352",
+        "server": "zcs86.semm-mautone.local",
+        "port": "587",
+        "authtype": "BASIC",
+        "saslformat": true,
+        "token": "oauth2Response.access_token",
+        "secure": false,
+        "tls": false,
+        "name": "",
+        "dname": "Zimbra email",
+        "x": 690,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "8d99facf19f3e4f4",
+        "type": "inject",
+        "z": "087926ec68603352",
+        "name": "Test Whatsapp Meta",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 270,
+        "y": 540,
+        "wires": [
+            [
+                "bf082af76a0b286e"
+            ]
+        ]
+    },
+    {
+        "id": "bf082af76a0b286e",
+        "type": "function",
+        "z": "087926ec68603352",
+        "name": "Build Whatsapp Test",
+        "func": "// =====================================================\n// BUILD WHATSAPP CLOUD TEST\n// Meta Cloud API - entorno TEST\n// =====================================================\n\nconst systemConfig = global.get(\"systemConfig\");\n\nif (!systemConfig) {\n    node.error(\"systemConfig no está cargado\", msg);\n    return null;\n}\n\n// -----------------------------------------------------\n// Configuración WhatsApp Cloud\n// -----------------------------------------------------\n\nconst cloud =\n    systemConfig.notifications?.whatsapp?.cloud;\n\nif (!cloud) {\n    node.error(\n        \"No existe notifications.whatsapp.cloud en systemConfig\",\n        msg\n    );\n    return null;\n}\n\nif (cloud.enabled !== true) {\n    node.warn(\"WhatsApp Cloud está deshabilitado\");\n    return null;\n}\n\n// -----------------------------------------------------\n// Validaciones\n// -----------------------------------------------------\n\nconst apiVersion = cloud.apiVersion;\nconst phoneNumberId = cloud.phoneNumberId;\nconst recipients = cloud.recipients;\n\nif (!apiVersion) {\n    node.error(\n        \"Falta whatsapp.cloud.apiVersion\",\n        msg\n    );\n    return null;\n}\n\nif (!phoneNumberId) {\n    node.error(\n        \"Falta whatsapp.cloud.phoneNumberId\",\n        msg\n    );\n    return null;\n}\n\nif (\n    !Array.isArray(recipients) ||\n    recipients.length === 0\n) {\n    node.error(\n        \"whatsapp.cloud.recipients no contiene destinatarios\",\n        msg\n    );\n    return null;\n}\n\n// -----------------------------------------------------\n// URL Meta Cloud API\n// -----------------------------------------------------\n\nconst url =\n    `https://graph.facebook.com/${apiVersion}/${phoneNumberId}/messages`;\n\n// -----------------------------------------------------\n// Generar un mensaje por destinatario\n// -----------------------------------------------------\n\nconst messages = [];\n\nfor (const recipient of recipients) {\n\n    if (!recipient.phone) {\n        node.warn(\n            `Destinatario sin teléfono: ${recipient.name || \"sin nombre\"}`\n        );\n        continue;\n    }\n\n    // Meta espera número internacional.\n    // Eliminamos +, espacios, guiones, etc.\n    const phone =\n        String(recipient.phone)\n            .replace(/\\D/g, \"\");\n\n    if (!phone) {\n        node.warn(\n            `Número inválido para ${recipient.name || \"destinatario\"}`\n        );\n        continue;\n    }\n\n    const out = {\n        ...msg,\n\n        url: url,\n\n        headers: {\n            \"Content-Type\": \"application/json\"\n        },\n\n        payload: {\n            messaging_product: \"whatsapp\",\n\n            to: phone,\n\n            type: \"template\",\n\n            template: {\n                name: \"hello_world\",\n\n                language: {\n                    code: \"en_US\"\n                }\n            }\n        },\n\n        whatsappCloud: {\n            recipientName:\n                recipient.name || phone,\n\n            recipientPhone: phone,\n\n            environment:\n                cloud.environment || \"test\"\n        }\n    };\n\n    messages.push(out);\n}\n\n// -----------------------------------------------------\n// Resultado\n// -----------------------------------------------------\n\nif (messages.length === 0) {\n    node.error(\n        \"No se pudo generar ningún mensaje WhatsApp Cloud\",\n        msg\n    );\n    return null;\n}\n\n// Un único output.\n// Node-RED enviará cada msg individualmente.\nreturn [messages];",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 560,
+        "y": 540,
+        "wires": [
+            [
+                "1bcc8d4652541136",
+                "8fcada8f1ae996e6"
+            ]
+        ]
+    },
+    {
+        "id": "f365bb82cc650090",
+        "type": "debug",
+        "z": "087926ec68603352",
+        "name": "Whatsapp responses",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1040,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "1bcc8d4652541136",
+        "type": "http request",
+        "z": "087926ec68603352",
+        "name": "Meta Whatsapp API",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "f36b855e16b49416",
+        "insecureHTTPParser": false,
+        "authType": "bearer",
+        "senderr": false,
+        "headers": [],
+        "x": 800,
+        "y": 540,
+        "wires": [
+            [
+                "f365bb82cc650090"
+            ]
+        ]
+    },
+    {
+        "id": "8fcada8f1ae996e6",
+        "type": "debug",
+        "z": "087926ec68603352",
+        "name": "Whatsapp request",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 950,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "e9c48dedcd0c9b57",
+        "type": "function",
+        "z": "087926ec68603352",
+        "name": "Buid Whatsapp Cloud Alarm",
+        "func": "// =====================================================\n// BUILD WHATSAPP CLOUD ALARM\n// Meta WhatsApp Cloud API\n//\n// ACTIVE  -> bms_alarm_active\n// CLEARED -> bms_alarm_cleared\n// =====================================================\n\nconst systemConfig = global.get(\"systemConfig\");\n\nif (!systemConfig) {\n    node.error(\"systemConfig no está cargado\", msg);\n    return null;\n}\n\n\n// -----------------------------------------------------\n// CONFIGURACIÓN WHATSAPP CLOUD\n// -----------------------------------------------------\n\nconst cloud =\n    systemConfig.notifications?.whatsapp?.cloud;\n\nif (!cloud) {\n    node.error(\n        \"No existe notifications.whatsapp.cloud\",\n        msg\n    );\n    return null;\n}\n\nif (cloud.enabled !== true) {\n    return null;\n}\n\nif (!cloud.apiVersion) {\n    node.error(\n        \"Falta whatsapp.cloud.apiVersion\",\n        msg\n    );\n    return null;\n}\n\nif (!cloud.phoneNumberId) {\n    node.error(\n        \"Falta whatsapp.cloud.phoneNumberId\",\n        msg\n    );\n    return null;\n}\n\nif (\n    !Array.isArray(cloud.recipients) ||\n    cloud.recipients.length === 0\n) {\n    node.error(\n        \"whatsapp.cloud.recipients está vacío\",\n        msg\n    );\n    return null;\n}\n\n\n// -----------------------------------------------------\n// VALIDAR ALARMA\n// -----------------------------------------------------\n\nconst alarm = msg.alarm;\n\nif (!alarm) {\n    node.error(\n        \"No existe msg.alarm\",\n        msg\n    );\n    return null;\n}\n\nif (\n    alarm.state !== \"ACTIVE\" &&\n    alarm.state !== \"CLEARED\"\n) {\n    node.warn(\n        `Estado de alarma no soportado: ${alarm.state}`\n    );\n    return null;\n}\n\n\n// -----------------------------------------------------\n// DATOS DE LA ALARMA\n// -----------------------------------------------------\n\nconst deviceName =\n    alarm.device?.name ||\n    alarm.device?.id ||\n    \"Equipo desconocido\";\n\nconst pointName =\n    alarm.point?.name ||\n    alarm.point?.id ||\n    \"Alarma\";\n\nconst severity =\n    alarm.severity ||\n    \"INFO\";\n\nconst description =\n    alarm.message ||\n    \"Sin descripción\";\n\n\n// -----------------------------------------------------\n// FECHA\n// -----------------------------------------------------\n\nconst timestamp =\n    Number(alarm.timestamp) ||\n    Date.now();\n\nconst dateText =\n    new Date(timestamp).toLocaleString(\n        \"es-UY\",\n        {\n            timeZone: \"America/Montevideo\",\n            day: \"2-digit\",\n            month: \"2-digit\",\n            year: \"numeric\",\n            hour: \"2-digit\",\n            minute: \"2-digit\",\n            hour12: false\n        }\n    );\n\n\n// -----------------------------------------------------\n// DURACIÓN\n// -----------------------------------------------------\n\nfunction formatDuration(ms) {\n\n    const totalSeconds =\n        Math.max(\n            0,\n            Math.round(\n                Number(ms || 0) / 1000\n            )\n        );\n\n    if (totalSeconds < 60) {\n        return `${totalSeconds} s`;\n    }\n\n    const minutes =\n        Math.floor(totalSeconds / 60);\n\n    const seconds =\n        totalSeconds % 60;\n\n    if (minutes < 60) {\n        return seconds > 0\n            ? `${minutes} min ${seconds} s`\n            : `${minutes} min`;\n    }\n\n    const hours =\n        Math.floor(minutes / 60);\n\n    const remainingMinutes =\n        minutes % 60;\n\n    return remainingMinutes > 0\n        ? `${hours} h ${remainingMinutes} min`\n        : `${hours} h`;\n}\n\n\n// -----------------------------------------------------\n// TEMPLATE SEGÚN ESTADO\n// -----------------------------------------------------\n\nlet templateName;\nlet parameters;\n\nif (alarm.state === \"ACTIVE\") {\n\n    templateName =\n        \"bms_alarm_active\";\n\n    // {{1}} Equipo\n    // {{2}} Alarma\n    // {{3}} Severidad\n    // {{4}} Descripción\n    // {{5}} Fecha\n\n    parameters = [\n        {\n            type: \"text\",\n            text: String(deviceName)\n        },\n        {\n            type: \"text\",\n            text: String(pointName)\n        },\n        {\n            type: \"text\",\n            text: String(severity)\n        },\n        {\n            type: \"text\",\n            text: String(description)\n        },\n        {\n            type: \"text\",\n            text: String(dateText)\n        }\n    ];\n\n} else {\n\n    templateName =\n        \"bms_alarm_cleared\";\n\n    const duration =\n        formatDuration(\n            alarm.durationMs\n        );\n\n    // {{1}} Equipo\n    // {{2}} Alarma\n    // {{3}} Descripción\n    // {{4}} Fecha\n    // {{5}} Duración\n\n    parameters = [\n        {\n            type: \"text\",\n            text: String(deviceName)\n        },\n        {\n            type: \"text\",\n            text: String(pointName)\n        },\n        {\n            type: \"text\",\n            text: String(description)\n        },\n        {\n            type: \"text\",\n            text: String(dateText)\n        },\n        {\n            type: \"text\",\n            text: String(duration)\n        }\n    ];\n}\n\n\n// -----------------------------------------------------\n// URL\n// -----------------------------------------------------\n\nconst url =\n    `https://graph.facebook.com/${cloud.apiVersion}/${cloud.phoneNumberId}/messages`;\n\n\n// -----------------------------------------------------\n// UN MENSAJE POR DESTINATARIO\n// -----------------------------------------------------\n\nconst outputMessages = [];\n\nfor (const recipient of cloud.recipients) {\n\n    if (!recipient.phone) {\n        node.warn(\n            `Destinatario sin teléfono: ${recipient.name || \"sin nombre\"}`\n        );\n        continue;\n    }\n\n    const phone =\n        String(recipient.phone)\n            .replace(/\\D/g, \"\");\n\n    if (!phone) {\n        node.warn(\n            `Número inválido: ${recipient.name || \"destinatario\"}`\n        );\n        continue;\n    }\n\n    const out = {\n        ...msg,\n\n        url: url,\n\n        headers: {\n            \"Content-Type\": \"application/json\"\n        },\n\n        payload: {\n            messaging_product: \"whatsapp\",\n\n            to: phone,\n\n            type: \"template\",\n\n            template: {\n                name: templateName,\n\n                language: {\n                    code: \"es\"\n                },\n\n                components: [\n                    {\n                        type: \"body\",\n                        parameters: parameters\n                    }\n                ]\n            }\n        },\n\n        notification: {\n            channel: \"whatsapp_cloud\",\n\n            recipientName:\n                recipient.name || phone,\n\n            recipientPhone:\n                phone,\n\n            template:\n                templateName\n        }\n    };\n\n    outputMessages.push(out);\n}\n\n\n// -----------------------------------------------------\n// SALIDA\n// -----------------------------------------------------\n\nif (outputMessages.length === 0) {\n\n    node.error(\n        \"No se generó ningún mensaje WhatsApp Cloud\",\n        msg\n    );\n\n    return null;\n}\n\n// Un solo output del Function.\n// Envía cada mensaje individualmente.\nreturn [outputMessages];",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 500,
+        "y": 280,
+        "wires": [
+            [
+                "31a5c94576a98b21"
+            ]
+        ]
+    },
+    {
+        "id": "31a5c94576a98b21",
+        "type": "http request",
+        "z": "087926ec68603352",
+        "name": "Meta Whatsapp API",
+        "method": "POST",
+        "ret": "obj",
+        "paytoqs": "ignore",
+        "url": "",
+        "tls": "",
+        "persist": false,
+        "proxy": "f36b855e16b49416",
+        "insecureHTTPParser": false,
+        "authType": "bearer",
+        "senderr": false,
+        "headers": [],
+        "x": 780,
+        "y": 280,
+        "wires": [
+            [
+                "dc14ae2ac3d3faa4"
+            ]
+        ]
+    },
+    {
+        "id": "dc14ae2ac3d3faa4",
+        "type": "debug",
+        "z": "087926ec68603352",
+        "name": "debug Cloud",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "targetType": "full",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1030,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "d4f4d7c2e9b00104",
+        "type": "whatsapp-api-send",
+        "z": "087926ec68603352",
+        "account": "b2f4d7c2e9b00102",
+        "name": "Send WhatsApp",
+        "peer": "59892626767@s.whatsapp.net",
+        "x": 780,
+        "y": 220,
+        "wires": [
+            [
+                "09164e8ae6798653"
+            ]
         ]
     },
     {
@@ -3117,6 +3424,89 @@
                 "de2b2fdd58e85e82"
             ]
         ]
+    },
+    {
+        "id": "17911c12c266a69b",
+        "type": "e-mail",
+        "z": "4ffdac17e98d3ae7",
+        "server": "zcs86.semm-mautone.local",
+        "port": "587",
+        "authtype": "BASIC",
+        "saslformat": true,
+        "token": "oauth2Response.access_token",
+        "secure": false,
+        "tls": false,
+        "name": "",
+        "dname": "Zimbra email",
+        "x": 650,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "54a7110e2311af54",
+        "type": "inject",
+        "z": "4ffdac17e98d3ae7",
+        "name": "test email",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 240,
+        "y": 320,
+        "wires": [
+            [
+                "9516944720931739"
+            ]
+        ]
+    },
+    {
+        "id": "9516944720931739",
+        "type": "function",
+        "z": "4ffdac17e98d3ae7",
+        "name": "Test email",
+        "func": "msg.to =\n    \"mercolux@semm-mautone.com.uy\";\n\nmsg.topic =\n    \"[BMS TEST] Prueba de envío SMTP\";\n\nmsg.payload =\n`SISTEMA BMS - SANATORIO\n\nPrueba de envío de correo desde Node-RED.\n\nSi recibe este mensaje, la comunicación SMTP entre\nel servidor BMS y Zimbra funciona correctamente.\n\nFecha: ${new Date().toLocaleString(\n    \"es-UY\",\n    {\n        timeZone: \"America/Montevideo\"\n    }\n)}\n\nEste mensaje es únicamente una prueba.`;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 320,
+        "wires": [
+            [
+                "17911c12c266a69b",
+                "d97bd62698d245e3"
+            ]
+        ]
+    },
+    {
+        "id": "d97bd62698d245e3",
+        "type": "debug",
+        "z": "4ffdac17e98d3ae7",
+        "name": "debug 3",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 640,
+        "y": 360,
+        "wires": []
     },
     {
         "id": "61d32fba33ee7de8",
@@ -3364,130 +3754,6 @@
         "y": 600,
         "wires": [
             []
-        ]
-    },
-    {
-        "id": "c3f4d7c2e9b00103",
-        "type": "inject",
-        "z": "a1f4d7c2e9b00101",
-        "name": "Send test message",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "",
-        "crontab": "",
-        "once": false,
-        "onceDelay": "",
-        "topic": "",
-        "payload": "PRUEBA BMS - Mensaje de alarma",
-        "payloadType": "str",
-        "x": 170,
-        "y": 100,
-        "wires": [
-            [
-                "6f565c424dbca1de"
-            ]
-        ]
-    },
-    {
-        "id": "e5f4d7c2e9b00105",
-        "type": "debug",
-        "z": "a1f4d7c2e9b00101",
-        "name": "Send result",
-        "active": true,
-        "tosidebar": true,
-        "complete": "true",
-        "targetType": "full",
-        "x": 720,
-        "y": 100,
-        "wires": []
-    },
-    {
-        "id": "07f4d7c2e9b00107",
-        "type": "debug",
-        "z": "a1f4d7c2e9b00101",
-        "name": "Incoming debug",
-        "active": false,
-        "tosidebar": true,
-        "complete": "true",
-        "targetType": "full",
-        "x": 470,
-        "y": 200,
-        "wires": []
-    },
-    {
-        "id": "18f4d7c2e9b00108",
-        "type": "inject",
-        "z": "a1f4d7c2e9b00101",
-        "name": "Read last 5",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "",
-        "crontab": "",
-        "once": false,
-        "onceDelay": "",
-        "topic": "",
-        "payload": "",
-        "payloadType": "date",
-        "x": 150,
-        "y": 300,
-        "wires": [
-            [
-                "29f4d7c2e9b00109"
-            ]
-        ]
-    },
-    {
-        "id": "29f4d7c2e9b00109",
-        "type": "whatsapp-api-history",
-        "z": "a1f4d7c2e9b00101",
-        "d": true,
-        "account": "b2f4d7c2e9b00102",
-        "name": "Recent Chat History",
-        "includeRaw": false,
-        "limit": "5",
-        "peer": "393331234567@s.whatsapp.net",
-        "unreadOnly": false,
-        "x": 450,
-        "y": 300,
-        "wires": [
-            [
-                "3af4d7c2e9b0010a"
-            ]
-        ]
-    },
-    {
-        "id": "3af4d7c2e9b0010a",
-        "type": "debug",
-        "z": "a1f4d7c2e9b00101",
-        "name": "History debug",
-        "active": true,
-        "tosidebar": true,
-        "complete": "true",
-        "targetType": "full",
-        "x": 730,
-        "y": 300,
-        "wires": []
-    },
-    {
-        "id": "6f565c424dbca1de",
-        "type": "whatsapp-api-send",
-        "z": "a1f4d7c2e9b00101",
-        "d": true,
-        "account": "b2f4d7c2e9b00102",
-        "name": "",
-        "peer": "59894055347@s.whatsapp.net",
-        "x": 410,
-        "y": 100,
-        "wires": [
-            [
-                "e5f4d7c2e9b00105"
-            ]
         ]
     }
 ]

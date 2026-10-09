@@ -180,8 +180,8 @@
         "11": {
           "point": "AlarmCriticLevelChlorine",
           "name": "Nivel crítico - Tanque de Cloro",
-          "severity": "CRITICAL",
-          "message": "El nivel de cloro es CRÍTICO."
+          "severity": "WARNING",
+          "message": "El tanque de Cloro está vacío."
         }
        }
      },
@@ -222,7 +222,7 @@
         "3": {
           "point": "AlarmFireJockeyBombOn",
           "name": "Bomba jockey de incendio encendida",
-          "severity": "CRITICAL",
+          "severity": "WARNING",
           "message": "La bomba jockey del sistema de incendio se encuentra encendida."
         },
 
@@ -257,8 +257,8 @@
         "8": {
           "point": "AlarmControlerPress2",
           "name": "Falla controlador - Presurización 2",
-          "severity": "WARNING",
-          "message": "Se detectó una falla en el controlador de presurización 2."
+          "severity": "CRITICAL",
+          "message": "Se detectó una falla en el controlador Maestro de presurización 2."
         },
 
         "9": {
@@ -271,8 +271,8 @@
         "10": {
           "point": "AlarmControlerPress4",
           "name": "Falla controlador - Presurización 4",
-          "severity": "WARNING",
-          "message": "Se detectó una falla en el controlador de presurización 4."
+          "severity": "CRITICAL",
+          "message": "Se detectó una falla en el controlador Maestro de presurización 4."
         }
       }
    },

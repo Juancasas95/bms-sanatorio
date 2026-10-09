@@ -506,24 +506,38 @@ docker run \
 # ======================================================
 # 10. NODE-RED OPCIONAL
 # ======================================================
+#
+# Runtime que no se reconstruye únicamente desde Git.
+#
+# whatsapp-api contiene las sesiones de autenticación
+# de Baileys utilizadas por WhatsApp QR.
+#
+# IMPORTANTE:
+#   - se incluye dentro del backup CIFRADO
+#   - NO debe versionarse en Git
+#   - node_modules NO se respalda
+#
+# ======================================================
 
-NODE_RED_FILES=()
+NODE_RED_PATHS=()
 
 
-for file in \
+for path in \
     nodered/.config.nodes.json \
     nodered/.config.runtime.json \
     nodered/.config.users.json \
-    nodered/flows_cred.json
+    nodered/flows_cred.json \
+    nodered/whatsapp-api
 
 do
 
     if (
-        [[ -f "${PROJECT_ROOT}/${file}" ]]
+        [[ -e "${PROJECT_ROOT}/${path}" ]] ||
+        [[ -L "${PROJECT_ROOT}/${path}" ]]
     ); then
 
-        NODE_RED_FILES+=(
-            "${file}"
+        NODE_RED_PATHS+=(
+            "${path}"
         )
     fi
 
@@ -547,7 +561,7 @@ tar \
     fuxa/appdata \
     fuxa/db \
     fuxa/images \
-    "${NODE_RED_FILES[@]}" \
+    "${NODE_RED_PATHS[@]}" \
     -C "${TMP_DIR}" \
     mosquitto/data \
     manifest.txt
