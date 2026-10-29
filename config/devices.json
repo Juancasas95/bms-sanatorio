@@ -55,5 +55,11 @@
        "heartbeatPoint": "HeartBitCounter",
        "heartbeatTimeoutMs": 10000
 	}
+  },
+    "ESP8266_01": {
+    "name": "ESP8266 EMOGREEN - Temperatura, humedad y contacto",
+    "gateway": "ESP8266",
+    "driver": "ESP8266",
+    "slave": 1
   }
 }

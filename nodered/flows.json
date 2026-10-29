@@ -263,6 +263,36 @@
         "reconnectMinMs": "2000"
     },
     {
+        "id": "45786125d7b1435c",
+        "type": "modbus-client",
+        "name": "ESP8266",
+        "clienttype": "tcp",
+        "bufferCommands": true,
+        "stateLogEnabled": false,
+        "queueLogEnabled": false,
+        "failureLogEnabled": true,
+        "tcpHost": "10.2.200.96",
+        "tcpPort": 502,
+        "tcpType": "DEFAULT",
+        "serialPort": "/dev/ttyUSB",
+        "serialType": "RTU-BUFFERD",
+        "serialBaudrate": 9600,
+        "serialDatabits": 8,
+        "serialStopbits": 1,
+        "serialParity": "none",
+        "serialConnectionDelay": 100,
+        "serialAsciiResponseStartDelimiter": "0x3A",
+        "unit_id": 1,
+        "commandDelay": 1,
+        "clientTimeout": 2000,
+        "reconnectOnTimeout": true,
+        "reconnectTimeout": 2000,
+        "parallelUnitIdsAllowed": true,
+        "showErrors": false,
+        "showWarnings": true,
+        "showLogs": true
+    },
+    {
         "id": "9b9982ad2806f380",
         "type": "file in",
         "z": "548bfb93b2adf834",
@@ -1169,11 +1199,16 @@
                 "t": "eq",
                 "v": "SCHNEIDER",
                 "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "ESP8266",
+                "vt": "str"
             }
         ],
         "checkall": "true",
         "repair": false,
-        "outputs": 3,
+        "outputs": 4,
         "x": 100,
         "y": 340,
         "wires": [
@@ -1185,6 +1220,9 @@
             ],
             [
                 "1738213180b425a0"
+            ],
+            [
+                "0acd7e6ca4ddb269"
             ]
         ]
     },
@@ -1323,6 +1361,33 @@
         "startDelayTime": "",
         "x": 340,
         "y": 420,
+        "wires": [
+            [
+                "71d5dfebef7ce9ae"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "0acd7e6ca4ddb269",
+        "type": "modbus-flex-getter",
+        "z": "291f91c97ecd24c1",
+        "name": "ESP8266",
+        "showStatusActivities": false,
+        "showErrors": true,
+        "showWarnings": false,
+        "logIOActivities": false,
+        "server": "45786125d7b1435c",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": true,
+        "delayOnStart": false,
+        "enableDeformedMessages": false,
+        "startDelayTime": "",
+        "x": 340,
+        "y": 500,
         "wires": [
             [
                 "71d5dfebef7ce9ae"
@@ -1901,11 +1966,16 @@
                 "t": "eq",
                 "v": "3",
                 "vt": "num"
+            },
+            {
+                "t": "eq",
+                "v": "4",
+                "vt": "num"
             }
         ],
         "checkall": "true",
         "repair": false,
-        "outputs": 3,
+        "outputs": 4,
         "x": 240,
         "y": 340,
         "wires": [
@@ -1919,6 +1989,9 @@
             ],
             [
                 "6131786a4ad006f3"
+            ],
+            [
+                "2fbe61e118cb4340"
             ]
         ]
     },
@@ -2109,6 +2182,53 @@
         "x": 870,
         "y": 220,
         "wires": []
+    },
+    {
+        "id": "41c30f7ade56e07a",
+        "type": "modbus-flex-getter",
+        "z": "f65d29de0116f69b",
+        "name": "ESP8266",
+        "showStatusActivities": false,
+        "showErrors": true,
+        "showWarnings": false,
+        "logIOActivities": false,
+        "server": "45786125d7b1435c",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": true,
+        "delayOnStart": false,
+        "enableDeformedMessages": false,
+        "startDelayTime": "",
+        "x": 640,
+        "y": 600,
+        "wires": [
+            [
+                "aefcd7a703c2ba1d"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "2fbe61e118cb4340",
+        "type": "function",
+        "z": "f65d29de0116f69b",
+        "name": "Prepare FlexGetter",
+        "func": "const req = msg.payload;\n\nmsg.payload = {\n    fc: req.fc,\n    unitid: req.unitid,\n    address: req.address,\n    quantity: req.quantity\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 450,
+        "y": 620,
+        "wires": [
+            [
+                "41c30f7ade56e07a"
+            ]
+        ]
     },
     {
         "id": "ca46874dcc29f8cb",
@@ -2317,11 +2437,16 @@
                 "t": "eq",
                 "v": "SCHNEIDER",
                 "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "ESP8266",
+                "vt": "str"
             }
         ],
         "checkall": "true",
         "repair": false,
-        "outputs": 3,
+        "outputs": 4,
         "x": 330,
         "y": 520,
         "wires": [
@@ -2332,6 +2457,10 @@
             [],
             [
                 "dd9de57e3953397d",
+                "1a5144b43dbf03b4"
+            ],
+            [
+                "75750caa36ce9b05",
                 "1a5144b43dbf03b4"
             ]
         ]
@@ -2451,8 +2580,8 @@
         "targetType": "full",
         "statusVal": "",
         "statusType": "auto",
-        "x": 600,
-        "y": 640,
+        "x": 580,
+        "y": 660,
         "wires": []
     },
     {
@@ -2535,6 +2664,26 @@
         "x": 850,
         "y": 80,
         "wires": []
+    },
+    {
+        "id": "75750caa36ce9b05",
+        "type": "modbus-flex-write",
+        "z": "434aa09526dd2e21",
+        "name": "ESP8266",
+        "showStatusActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "server": "45786125d7b1435c",
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": false,
+        "delayOnStart": false,
+        "startDelayTime": "",
+        "x": 560,
+        "y": 600,
+        "wires": [
+            [],
+            []
+        ]
     },
     {
         "id": "ea9ea0d016079e1c",

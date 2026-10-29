@@ -1,0 +1,132 @@
+{
+  "manufacturer": "EMOGREEN / ESP8266",
+  "model": "NodeMCU ESP-12E - Modbus TCP (firmware BMS)",
+  "version": "1.0",
+  "description": "Mapa del firmware: Holding Registers FC03, y relé por FC06.",
+  "variables": {
+
+    "TemperatureAmbient": {
+      "name": "Temperatura ambiente DHT11",
+      "address": 100,
+      "quantity": 1,
+      "fc": 3,
+      "type": "int16",
+      "unit": "°C",
+      "read": true,
+      "write": false,
+      "scan": 1000,
+      "multiplier": 0.1,
+      "decimals": 1
+    },
+    "HumidityAmbient": {
+      "name": "Humedad relativa DHT11",
+      "address": 101,
+      "quantity": 1,
+      "fc": 3,
+      "type": "uint16",
+      "unit": "%",
+      "read": true,
+      "write": false,
+      "scan": 1000,
+      "multiplier": 0.1,
+      "decimals": 1
+    },
+
+    "MagneticContact": {
+      "name": "Contacto magnético",
+      "address": 102,
+      "quantity": 1,
+      "fc": 3,
+      "type": "bool",
+      "unit": "",
+      "read": true,
+      "write": false,
+      "scan": 1000
+    },
+    "TemperatureProbe": {
+      "name": "Temperatura sonda DS18B20",
+      "address": 103,
+      "quantity": 1,
+      "fc": 3,
+      "type": "int16",
+      "unit": "°C",
+      "read": true,
+      "write": false,
+      "scan": 1000,
+      "multiplier": 0.1,
+      "decimals": 1
+    },
+    "SensorStatus": {
+      "name": "Estado de sensores (bits)",
+      "address": 104,
+      "quantity": 1,
+      "fc": 3,
+      "type": "bitmask",
+      "unit": "",
+      "read": true,
+      "write": false,
+      "scan": 10000,
+      "bits": {
+        "0": {
+          "point": "DHTValid",
+          "name": "DHT11 válido",
+          "unit": ""
+        },
+        "1": {
+          "point": "DS18B20Valid",
+          "name": "DS18B20 válido",
+          "unit": ""
+        }
+      }
+    },
+    "SensorStatusRaw": {
+      "name": "Estado de sensores (registro)",
+      "address": 104,
+      "quantity": 1,
+      "fc": 3,
+      "type": "uint16",
+      "unit": "",
+      "read": true,
+      "write": false,
+      "scan": 10000
+    },
+    "TestRegister": {
+      "name": "Registro de prueba",
+      "address": 106,
+      "quantity": 1,
+      "fc": 3,
+      "type": "uint16",
+      "unit": "",
+      "read": true,
+      "write": false,
+      "scan": 30000
+    },
+    "RelayCommand": {
+      "name": "Mando relé D0",
+      "address": 107,
+      "quantity": 1,
+      "fc": 3,
+      "type": "uint16",
+      "unit": "",
+      "read": true,
+      "write": true,
+      "scan": 1000,
+      "writeFc": 6,
+      "writeAddress": 107,
+      "writeQuantity": 1,
+      "min": 0,
+      "max": 1
+    },
+    "RelayState": {
+      "name": "Relé D0 - estado lógico aplicado",
+      "address": 108,
+      "quantity": 1,
+      "fc": 3,
+      "type": "bool",
+      "unit": "",
+      "read": true,
+      "write": false,
+      "scan": 5000
+    }
+  }
+}

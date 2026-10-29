@@ -18,5 +18,11 @@
         "ip": "10.0.21.200",
         "port": 502,
         "timeout": 2000
+ },
+  "ESP8266": {
+    "protocol": "modbus-tcp",
+    "ip": "10.2.200.96",
+    "port": 502,
+    "timeout": 2000
  }
 }

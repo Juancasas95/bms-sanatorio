@@ -273,6 +273,41 @@
           "name": "Falla controlador - Presurización 4",
           "severity": "CRITICAL",
           "message": "Se detectó una falla en el controlador Maestro de presurización 4."
+        },
+
+        "11": {
+          "point": "AlarmHighLevelFire",
+          "name": "Nivel Alto - Tanque 1 - Incendio",
+          "severity": "CRITICAL",
+          "message": "Nivel ALTO tanque 1 de Incendio."
+        },
+
+        "12": {
+          "point": "AlarmHighLevelPress1",
+          "name": "Nivel Alto - Tanque 2 - Presurización 1",
+          "severity": "CRITICAL",
+          "message": "El nivel del Tanque 2 de presurizacion es ALTO."
+        },
+
+        "13": {
+          "point": "AlarmHighLevelPress2",
+          "name": "Nivel Alto - Tanque 3 - Presurización 2",
+          "severity": "CRITICAL",
+          "message": "El nivel del Tanque 3 de presurizacion es ALTO."
+        },
+
+        "14": {
+          "point": "AlarmHighLevelElev1",
+          "name": "Nivel Alto - Tanque 4 - Elevación 1",
+          "severity": "CRITICAL",
+          "message": "El nivel del Tanque 4 de elevación es ALTO."
+        },
+
+        "15": {
+          "point": "AlarmHighLevelElev2",
+          "name": "Nivel Alto - Tanque 5 - Elevación 2",
+          "severity": "CRITICAL",
+          "message": "El nivel del Tanque 5 de elevación es ALTO."
         }
       }
    },
