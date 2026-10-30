@@ -7,7 +7,7 @@
 
   "notifications": {
     "whatsapp": {
-        "enabled": true,
+        "enabled": false,
 
         "qr": {
             "enabled": true,
@@ -29,7 +29,11 @@
             "apiVersion": "v25.0",
             "phoneNumberId": "1439148929271406",
             "recipients": [
-                {
+		{
+                    "name": "Guardia Mantenimiento",
+                    "phone": "59892626767"
+                },
+		{
                     "name": "Mantenimiento",
                     "phone": "59894405333"
                 }
@@ -38,7 +42,7 @@
     },
 
     "email": {
-        "enabled": true,
+        "enabled": false,
         "recipients": [
             "mercolux@semm-mautone.com.uy"
         ]
